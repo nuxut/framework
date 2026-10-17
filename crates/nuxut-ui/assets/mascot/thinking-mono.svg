@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<g transform="scale(.5)" fill="currentColor">
+<g><circle cx="352" cy="176" r="8"/><circle cx="384" cy="136" r="12"/><circle cx="426" cy="86" r="17"/></g>
+<g transform="translate(256 266) scale(.86) rotate(-4)">
+<path transform="translate(-62 22) scale(-1 1) rotate(18)" d="M-6-22A170 170 0 0 1 176-96A300 300 0 0 0-6 22Z"/>
+<path transform="translate(0 60) scale(.95)" d="M-28 0A200 200 0 0 1-56 98A320 320 0 0 0 0 34A320 320 0 0 0 56 98A200 200 0 0 1 28 0Z"/>
+<path fill-rule="evenodd" d="M-76 0A76 86 0 1 0 76 0A76 86 0 1 0-76 0ZM-54 -12A22 22 0 1 0 -10 -12A22 22 0 1 0 -54 -12ZM10 -12A22 22 0 1 0 54 -12A22 22 0 1 0 10 -12ZM-12.5 12Q0 7.6 12.5 12L0 29.6Z"/>
+<path d="M-38.5 -18A12.5 12.5 0 1 0 -13.5 -18A12.5 12.5 0 1 0 -38.5 -18ZM25.5 -18A12.5 12.5 0 1 0 50.5 -18A12.5 12.5 0 1 0 25.5 -18Z"/>
+<path transform="translate(62 22) rotate(6)" d="M-6-22A170 170 0 0 1 176-96A300 300 0 0 0-6 22Z"/>
+</g>
+</g>
+</svg>

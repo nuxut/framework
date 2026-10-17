@@ -1,0 +1,83 @@
+# Uygulama sınıfı (Wayland app_id / Hyprland class) → Nerd Font glifi. nuxut_ui::AppGlyphs okur.
+# Kod noktaları Nerd Fonts glyphnames.json (3.5.1) adlarından; kurulu Symbols Nerd Font'ta doğrulandı.
+#
+# Satır:        <kod noktası, hex> <glif adı> <sınıf>...     (sınıflar küçük harf, benzersiz)
+# Önek satırı:  prefix <kod noktası, hex> <glif adı> <önek>  (sürüm/bileşen soneki taşıyan aileler)
+# Yeni uygulama = bir satıra bir sınıf. '#' ile başlayan satırlar ve boş satırlar yok sayılır.
+
+f0239 nf-md-firefox firefox firefox-esr firefoxdeveloperedition firefox-developer-edition firefox-nightly
+f059f nf-md-web librewolf zen zen-browser zen-alpha floorp waterfox brave-browser vivaldi-stable vivaldi epiphany qutebrowser falkon mullvadbrowser
+f02af nf-md-google_chrome google-chrome google-chrome-stable google-chrome-beta chromium chromium-browser thorium-browser
+f03ce nf-md-opera opera
+f01e9 nf-md-microsoft_edge microsoft-edge microsoft-edge-stable
+f371 nf-linux-tor tor-browser torbrowser
+f018d nf-md-console kitty alacritty foot footclient wezterm ghostty konsole gnome-terminal gnome-terminal-server kgx ptyxis xterm uxterm terminator tilix st st-256color urxvt rxvt rio xfce4-terminal warp blackbox contour
+f0a1e nf-md-microsoft_visual_studio_code code code-oss code-url-handler code-insiders cursor windsurf
+f372 nf-linux-vscodium vscodium codium
+e6ae nf-custom-neovim neovide nvim neovim
+e62b nf-custom-vim gvim vim
+e632 nf-custom-emacs emacs
+e808 nf-dev-jetbrains jetbrains-toolbox jetbrains-clion jetbrains-goland jetbrains-rider jetbrains-rustrover jetbrains-studio android-studio
+e7b5 nf-dev-intellij jetbrains-idea jetbrains-idea-ce
+e877 nf-dev-pycharm jetbrains-pycharm jetbrains-pycharm-ce
+e8e4 nf-dev-webstorm jetbrains-webstorm
+e7ee nf-dev-godot godot godot4
+f1a7c nf-md-text_box_edit texteditor gedit kate kwrite mousepad sublime_text sublime-text gnome-text-editor lapce helix zed dev.zed.zed
+e6bb nf-custom-obsidian obsidian
+f082e nf-md-notebook logseq joplin notion-app anytype
+f066f nf-md-discord discord vesktop webcord legcord armcord equibop
+f2c6 nf-fa-telegram telegram telegramdesktop telegram-desktop materialgram ayugram
+f04b1 nf-md-slack slack
+f02bb nf-md-microsoft_teams teams teams-for-linux
+f05a3 nf-md-whatsapp whatsapp whatsapp-for-linux zapzap whatsie
+f0b79 nf-md-chat signal element fractal nheko dino gajim pidgin hexchat quassel
+f04af nf-md-skype skype skypeforlinux
+f370 nf-linux-thunderbird thunderbird thunderbird-esr betterbird
+f01ee nf-md-email evolution geary mailspring kmail
+f0567 nf-md-video zoom obs com.obsproject.studio kooha
+f04c7 nf-md-spotify spotify spotube
+f36e nf-linux-mpv mpv
+f057c nf-md-vlc vlc
+f040c nf-md-play_circle celluloid totem showtime haruna smplayer
+f075a nf-md-music rhythmbox audacious amberol elisa lollypop strawberry clementine cider tauon
+f0387 nf-md-music_note audacity ardour lmms reaper bitwig-studio
+f057e nf-md-volume_high pavucontrol pwvucontrol helvum qpwgraph
+f062e nf-md-tune easyeffects
+f024b nf-md-folder nautilus thunar dolphin nemo pcmanfm pcmanfm-qt caja files
+f338 nf-linux-gimp gimp gimp-2.10 gimp-3.0
+f33b nf-linux-inkscape inkscape
+f33d nf-linux-krita krita
+f0ceb nf-md-blender blender
+f33c nf-linux-kdenlive kdenlive
+f336 nf-linux-freecad freecad
+f02e9 nf-md-image loupe eog imv feh gwenview nomacs qimgv ristretto shotwell
+f37c nf-linux-libreofficewriter libreoffice-writer
+f378 nf-linux-libreofficecalc libreoffice-calc
+f37a nf-linux-libreofficeimpress libreoffice-impress
+f379 nf-linux-libreofficedraw libreoffice-draw
+f37b nf-linux-libreofficemath libreoffice-math
+f377 nf-linux-libreofficebase libreoffice-base
+f376 nf-linux-libreoffice libreoffice libreoffice-startcenter soffice onlyoffice desktopeditors
+f0226 nf-md-file_pdf_box evince zathura okular papers sioyek
+f04d3 nf-md-steam steam
+f0297 nf-md-gamepad_variant lutris heroic bottles prismlauncher retroarch
+f0373 nf-md-minecraft minecraft
+f0493 nf-md-cog nuxut-settings gnome-control-center systemsettings nwg-look qt5ct qt6ct
+f00ec nf-md-calculator calculator qalculate-gtk qalculate-qt kcalc gnome-calculator
+f00ed nf-md-calendar nuxut-calendar gnome-calendar
+f012a nf-md-chart_line gnome-system-monitor mission-center resources plasma-systemmonitor
+f0379 nf-md-monitor virt-manager gnome-boxes boxes remmina
+f00af nf-md-bluetooth blueman-manager overskride
+f06f3 nf-md-network nm-connection-editor
+f0306 nf-md-key keepassxc bitwarden 1password seahorse
+f01da nf-md-download qbittorrent transmission transmission-gtk fragments deluge
+f02a4 nf-md-github github-desktop
+f0868 nf-md-docker docker-desktop
+f03d6 nf-md-package_variant pamac-manager gnome-software discover octopi
+
+prefix f0297 nf-md-gamepad_variant steam_app_
+prefix f376 nf-linux-libreoffice libreoffice
+prefix e808 nf-dev-jetbrains jetbrains-
+prefix f0239 nf-md-firefox firefox
+prefix f02af nf-md-google_chrome chrome-
+prefix f338 nf-linux-gimp gimp

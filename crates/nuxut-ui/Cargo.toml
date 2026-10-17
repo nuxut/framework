@@ -1,0 +1,59 @@
+[package]
+name = "nuxut-ui"
+description = "Nuxut bileşenleri: düğmeler, menü, liste, kaydırma, bildirim, metin girişi, renk seçici, takvim."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = ["brand"]
+# Marka işareti (`BrandMark`, Kara Sağan) ve maskot (`Mascot`, Fiyu): gömülü SVG'leri alfa maskesine rasterleştirmek için
+# nuxut-image'in sertleştirilmiş SVG yolu (resvg). Yalın tüketici `default-features = false` ile kapatır.
+brand = ["dep:nuxut-image"]
+
+[dependencies]
+nuxut-image = { workspace = true, optional = true }
+tracing.workspace = true
+nuxut-core.workspace = true
+nuxut-motion.workspace = true
+nuxut-theme.workspace = true
+nuxut-render.workspace = true
+nuxut-locale.workspace = true
+zeroize = "1"
+# Parola tamponu: kendi sayfa hizalı anonim eşlemesi + mlock + MADV_DONTDUMP, güvenli API ile
+# (nuxut-ui `forbid(unsafe_code)`). Ağaçta zaten var (fontdb).
+memmap2 = "0.9"
+# Takvim dar genişlikte gün adının ilk grafemi (ağaçta zaten var: cosmic-text, nuxut-i18n).
+unicode-segmentation.workspace = true
+# Erişilebilirlik ağacı (ADR-0011): bileşenlerin `access` yöntemleri `nuxut-access` kurucusunu doldurur.
+nuxut-access.workspace = true
+
+[dev-dependencies]
+# Galeri sayfa 8: uygulama ikonu dokuları (`AppIconTextures`, `render` özelliği).
+nuxut-image = { workspace = true, features = ["render"] }
+# Galeri sayfa 8: kullanıcı dizinindeki SVG tema önizlemeleri yalıtılmış işçide (ADR-0007).
+nuxut-image-sandbox.workspace = true
+nuxut-palette.workspace = true
+# access_tests: ağacın geçerliliği ve eşleme AccessKit tüketicisiyle (D-Bus'sız).
+accesskit_consumer.workspace = true
+nuxut-wayland.workspace = true
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
+# brand_icons örneği: PNG kodlayıcı (nuxut-image üzerinden zaten ağaçta).
+image.workspace = true
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+# secret.rs testi: alt süreçte RLIMIT_MEMLOCK = 0.
+rustix = { workspace = true, features = ["process"] }
+
+[[example]]
+name = "brand_icons"
+required-features = ["brand"]
+
+[[example]]
+name = "gallery"
+required-features = ["brand"]
+
+[lints]
+workspace = true

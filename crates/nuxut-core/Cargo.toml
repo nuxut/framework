@@ -1,0 +1,19 @@
+[package]
+name = "nuxut-core"
+description = "Nuxut temel tipleri: geometri, renk, girdi olayları."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = { workspace = true, optional = true }
+zeroize.workspace = true
+
+[features]
+default = ["serde"]
+serde = ["dep:serde"]
+
+[lints]
+workspace = true

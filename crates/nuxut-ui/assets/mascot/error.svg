@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<g transform="scale(.5)">
+<path class="m-wing-front" d="M266 150A20 20 0 0 1 290 125A30 30 0 0 1 335 108A25 25 0 0 1 378 120A25 25 0 0 1 404 150A220 220 0 0 1 266 150Z"/>
+<g class="m-body"><rect x="296" y="164" width="9" height="22" rx="4.5" transform="rotate(12 300 175)"/><rect x="330" y="170" width="9" height="22" rx="4.5" transform="rotate(12 334 181)"/><rect x="364" y="164" width="9" height="22" rx="4.5" transform="rotate(12 368 175)"/></g>
+<g transform="translate(256 266) scale(.86) rotate(0)">
+<path class="m-body m-wing-back" transform="translate(-62 22) scale(-1 1) rotate(56)" d="M-6-22A170 170 0 0 1 176-96A300 300 0 0 0-6 22Z"/>
+<path class="m-body" transform="translate(0 60) scale(.95)" d="M-28 0A200 200 0 0 1-56 98A320 320 0 0 0 0 34A320 320 0 0 0 56 98A200 200 0 0 1 28 0Z"/>
+<path class="m-body" d="M-76 0A76 86 0 1 0 76 0A76 86 0 1 0-76 0Z"/>
+<path class="m-wing-front" d="M-53.25-6.31L-12.06-21.3A22 22 0 1 1-53.25-6.31ZM53.25-6.31L12.06-21.3A22 22 0 1 0 53.25-6.31Z"/>
+<path class="m-detail" fill-rule="evenodd" d="M-41 -3A11 11 0 1 0 -19 -3A11 11 0 1 0 -41 -3ZM19 -3A11 11 0 1 0 41 -3A11 11 0 1 0 19 -3ZM-37.52 -7.18A4 4 0 1 0 -29.52 -7.18A4 4 0 1 0 -37.52 -7.18ZM22.48 -7.18A4 4 0 1 0 30.48 -7.18A4 4 0 1 0 22.48 -7.18Z"/>
+<path class="m-beak" d="M-10 16Q0 12.5 10 16L0 30Z"/>
+<path class="m-wing-front" transform="translate(62 22) rotate(56)" d="M-6-22A170 170 0 0 1 176-96A300 300 0 0 0-6 22Z"/>
+</g>
+</g>
+</svg>

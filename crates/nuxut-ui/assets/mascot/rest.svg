@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<g transform="scale(.5)">
+<g class="m-wing-front"><path d="M120 96L126 114L144 120L126 126L120 144L114 126L96 120L114 114Z"/><path d="M168 54L171.5 64.5L182 68L171.5 71.5L168 82L164.5 71.5L154 68L164.5 64.5Z"/></g>
+<g transform="translate(256 266) scale(.86) rotate(-10)">
+<path class="m-body m-wing-back" transform="translate(-62 22) scale(-1 1) rotate(40)" d="M-6-22A170 170 0 0 1 176-96A300 300 0 0 0-6 22Z"/>
+<path class="m-body" transform="translate(0 60) scale(.95)" d="M-28 0A200 200 0 0 1-56 98A320 320 0 0 0 0 34A320 320 0 0 0 56 98A200 200 0 0 1 28 0Z"/>
+<path class="m-body" d="M-76 0A76 86 0 1 0 76 0A76 86 0 1 0-76 0Z"/>
+<path class="m-detail" d="M-54-12A22 22 0 0 0-10-12L-17-12A15 15 0 0 1-47-12ZM10-12A22 22 0 0 0 54-12L47-12A15 15 0 0 1 17-12Z"/>
+<path class="m-beak" d="M-12.5 12Q0 7.6 12.5 12L0 29.6Z"/>
+<path class="m-wing-front" transform="translate(62 22) rotate(40)" d="M-6-22A170 170 0 0 1 176-96A300 300 0 0 0-6 22Z"/>
+</g>
+</g>
+</svg>

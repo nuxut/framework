@@ -1,0 +1,41 @@
+[package]
+name = "nuxut-video"
+description = "Nuxut video duvar kağıdı (libmpv, çalışma zamanında yüklenir) ve duvar kağıdı içe aktarma/dönüştürme."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+# JPEG XL yalnızca `Importer::in_process_unsandboxed` (örnek/test, süreç içi) yolu için
+# (nuxut-image/jxl → jxl-oxide). Varsayılan KAPALI: üretim yolu (`Importer::new(decoder)`) JXL dahil
+# her kullanıcı görselini yalıtılmış işçide çözer (ADR-0007 takip). Render (Painter dokusu) her zaman açık.
+jxl = ["nuxut-image/jxl"]
+
+[dependencies]
+nuxut-core.workspace = true
+nuxut-render.workspace = true
+nuxut-image = { workspace = true, features = ["render"] }
+image.workspace = true
+blake3.workspace = true
+serde.workspace = true
+toml.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+dirs.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libloading.workspace = true
+rustix.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+nuxut-wayland.workspace = true
+nuxut-theme.workspace = true
+nuxut-image-sandbox.workspace = true
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
+
+[lints]
+workspace = true

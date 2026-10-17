@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<g transform="scale(.5)">
+<g class="m-wing-front"><rect x="72" y="84" width="28" height="12" rx="6" transform="rotate(-30 86 90)"/><rect x="414" y="80" width="28" height="12" rx="6" transform="rotate(35 428 86)"/><rect x="243" y="64" width="28" height="12" rx="6" transform="rotate(70 257 70)"/><circle cx="164" cy="66" r="8"/><circle cx="352" cy="58" r="8"/></g>
+<g class="m-body"><circle cx="60" cy="140" r="7"/><circle cx="452" cy="146" r="7"/><circle cx="208" cy="110" r="6"/><circle cx="310" cy="116" r="6"/></g>
+<g transform="translate(256 266) scale(.86) rotate(0)">
+<path class="m-body m-wing-back" transform="translate(-52 18) scale(-1 1) rotate(-75) scale(1 -1)" d="M-6-22A170 170 0 0 1 176-96A300 300 0 0 0-6 22Z"/>
+<path class="m-body" transform="translate(0 60) scale(.95)" d="M-28 0A200 200 0 0 1-56 98A320 320 0 0 0 0 34A320 320 0 0 0 56 98A200 200 0 0 1 28 0Z"/>
+<path class="m-body" d="M-76 0A76 86 0 1 0 76 0A76 86 0 1 0-76 0Z"/>
+<path class="m-detail" d="M-54-12A22 22 0 0 1-10-12L-17-12A15 15 0 0 0-47-12ZM10-12A22 22 0 0 1 54-12L47-12A15 15 0 0 0 17-12Z"/>
+<path class="m-beak" d="M-14 10Q0 4 14 10Q0 40-14 10Z"/>
+<path class="m-wing-front" transform="translate(52 18) rotate(-75) scale(1 -1)" d="M-6-22A170 170 0 0 1 176-96A300 300 0 0 0-6 22Z"/>
+</g>
+</g>
+</svg>

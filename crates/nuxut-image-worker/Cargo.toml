@@ -1,0 +1,25 @@
+[package]
+name = "nuxut-image-worker"
+description = "Yalıtılmış görsel işçisi ikilisi (ADR-0007): seccomp + landlock + rlimit altında güvenilmeyen görsel çözer. Tüketiciler ayrı bir cargo çağrısıyla derler; özellikleri ana ikiliye birleşmez."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+nuxut-image-sandbox = { workspace = true, features = ["worker"] }
+# İşçi JPEG XL de çözer (yalnızca bu ikilide; ana süreçte jxl-oxide yok). `render` (GL) yok.
+nuxut-image = { workspace = true, features = ["jxl"] }
+
+[dev-dependencies]
+tempfile = "3"
+# Yalnızca `examples/wallpaper_bench.rs` (ölçüm).
+nuxut-image-sandbox = { workspace = true }
+
+[[bin]]
+name = "nuxut-image-worker"
+path = "src/main.rs"
+
+[lints]
+workspace = true

@@ -1,0 +1,38 @@
+[package]
+name = "nuxut-i18n"
+description = "Nuxut uluslararasılaştırma (ADR-0010): Fluent katalogları, dil zinciri, t! makrosu, katalog denetimi ve gömülü metin bekçisi."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+nuxut-config.workspace = true
+nuxut-locale.workspace = true
+nuxut-i18n-macros.workspace = true
+fluent-bundle.workspace = true
+fluent-syntax.workspace = true
+fluent-langneg.workspace = true
+# Biçimleyici imzasındaki eşzamanlı memoizer tipi (fluent-bundle zaten çeker).
+intl-memoizer.workspace = true
+unic-langid.workspace = true
+# [max: N] grafem sayımı ve 4 KiB kırpmanın grafem sınırı (ağaçta zaten var: cosmic-text).
+unicode-segmentation.workspace = true
+tracing.workspace = true
+dirs.workspace = true
+
+# Kullanıcı dosyası: O_NOFOLLOW|O_NONBLOCK açılış (symlink izlenmez, FIFO'da takılmaz).
+[target.'cfg(unix)'.dependencies]
+rustix.workspace = true
+
+# Kullanıcı çeviri dizini izleme (watch.rs): olay tabanlı, boşta sıfır CPU; config ile aynı crate.
+[target.'cfg(target_os = "linux")'.dependencies]
+inotify.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+
+
+[lints]
+workspace = true

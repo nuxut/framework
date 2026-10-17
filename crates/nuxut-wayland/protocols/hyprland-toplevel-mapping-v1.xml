@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="hyprland_toplevel_mapping_v1">
+  <copyright>
+    Copyright © 2025 WhySoBad
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+    3. Neither the name of the copyright holder nor the names of its
+    contributors may be used to endorse or promote products derived from
+    this software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  </copyright>
+
+  <!--
+    Nuxut notu (2026-10-14): bu dosya çevrimdışı yeniden kuruldu. Ağ yok ve
+    makinede hyprland-protocols XML'i kurulu değil; arayüz/istek/olay adları, sırası,
+    sürümleri ve imzaları Hyprland 0.56.2 paketindeki iki kaynaktan birebir alındı:
+    /usr/include/hyprland/protocols/hyprland-toplevel-mapping-v1.hpp (hyprwayland-scanner
+    0.4.6 çıktısı; telif bloğu yukarıda aynen) ve /usr/bin/Hyprland içindeki wl_message
+    tabloları (.data.rel.ro): get_window_for_toplevel "no", get_window_for_toplevel_wlr "no",
+    destroy ""; tutamaç olayları window_address "uu", failed ""; istek destroy "".
+    Açıklama metinleri özettir (asıl XML'in belgeleri değil). Asıl kaynak:
+    hyprwm/hyprland-protocols protocols/hyprland-toplevel-mapping-v1.xml.
+  -->
+
+  <description summary="map foreign toplevel handles to Hyprland window addresses">
+    Allows clients to retrieve the Hyprland window address of an
+    ext_foreign_toplevel_handle_v1 or zwlr_foreign_toplevel_handle_v1.
+  </description>
+
+  <interface name="hyprland_toplevel_mapping_manager_v1" version="1">
+    <description summary="manager to request window addresses for toplevels">
+      Creates mapping handles that resolve a foreign toplevel to its window address.
+    </description>
+
+    <request name="get_window_for_toplevel">
+      <description summary="get the window address of an ext foreign toplevel"/>
+      <arg name="handle" type="new_id" interface="hyprland_toplevel_window_mapping_handle_v1"/>
+      <arg name="toplevel" type="object" interface="ext_foreign_toplevel_handle_v1"/>
+    </request>
+
+    <request name="get_window_for_toplevel_wlr">
+      <description summary="get the window address of a wlr foreign toplevel"/>
+      <arg name="handle" type="new_id" interface="hyprland_toplevel_window_mapping_handle_v1"/>
+      <arg name="toplevel" type="object" interface="zwlr_foreign_toplevel_handle_v1"/>
+    </request>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the manager"/>
+    </request>
+  </interface>
+
+  <interface name="hyprland_toplevel_window_mapping_handle_v1" version="1">
+    <description summary="result of a toplevel to window address mapping">
+      Receives exactly one of window_address or failed.
+    </description>
+
+    <event name="window_address">
+      <description summary="the window address (64 bit, split into two halves)"/>
+      <arg name="address_hi" type="uint" summary="high 32 bits of the address"/>
+      <arg name="address_lo" type="uint" summary="low 32 bits of the address"/>
+    </event>
+
+    <event name="failed">
+      <description summary="the toplevel could not be mapped"/>
+    </event>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the handle"/>
+    </request>
+  </interface>
+</protocol>

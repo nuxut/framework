@@ -1,0 +1,18 @@
+[package]
+name = "nuxut-access"
+description = "Nuxut erişilebilirlik ağacı (ADR-0011): AccessKit düğüm kurucusu, kararlı kimlik, AT eylem süzgeci. Platform kodu yok."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+nuxut-core.workspace = true
+# Ağaç modeli: saf veri crate'i (tek zorunlu bağımlılık uuid). AT-SPI adaptörü nuxut-wayland `a11y`'de.
+accesskit.workspace = true
+# Metin alanının grafem uzunlukları (TextRun); ağaçta zaten var.
+unicode-segmentation.workspace = true
+
+[lints]
+workspace = true

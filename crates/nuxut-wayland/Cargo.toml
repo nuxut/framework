@@ -1,0 +1,62 @@
+[package]
+name = "nuxut-wayland"
+description = "Nuxut Wayland çalışma zamanı: layer-shell yüzeyleri, EGL, girdi, olay döngüsü."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Birim testlerde runtime kimlikleri (`OutputId::for_test`, `SurfaceId::for_test`); yalnızca
+# dev-dependency olarak açılır (gerçek kimlikleri compositor/runtime verir).
+test-util = []
+# AT-SPI erişilebilirliği (ADR-0011): yüzey başına accesskit_unix adaptörü (zbus, async-io). Kapalıyken
+# adaptör ve D-Bus bağlantısı hiç yoktur; `App::accessibility` çağrılmaz.
+a11y = ["dep:accesskit_unix", "dep:blocking"]
+
+[dependencies]
+nuxut-core.workspace = true
+nuxut-config.workspace = true
+nuxut-theme.workspace = true
+# [locale] değişince katalog yeniden kurulur (ADR-0010).
+nuxut-i18n.workspace = true
+nuxut-render.workspace = true
+# Erişilebilirlik ağacı tipleri (`App::accessibility`; ADR-0011). Saf veri, platform kodu yok.
+nuxut-access.workspace = true
+accesskit.workspace = true
+accesskit_unix = { workspace = true, optional = true }
+# a11y'nin zbus'ı için yalnız sürüm sabiti (kodda kullanılmaz; kök Cargo.toml).
+blocking = { workspace = true, optional = true }
+# Keymap'siz biriken ham tuş kodları (parola) bırakılırken sıfırlanır (keyfocus.rs).
+zeroize.workspace = true
+# Klavye eşlemi (keysym + utf8) sctk'nin xkbcommon tabanlı klavyesinden gelir.
+smithay-client-toolkit = { workspace = true, features = ["xkbcommon"] }
+# Yedek keymap (compositor keymap göndermezse "us") ve değiştiricisiz keysym çözümü (keysym.rs); sctk ile aynı sürüm, ağaçta zaten var.
+xkbcommon = { version = "0.8", default-features = false }
+# Yedek keymap ve yazılım sunumunun shm tamponları için memfd + mmap (dosya sisteminde iz bırakmaz); wayland-backend aynı sürümü çeker.
+# Pano izleme okuması: `poll` ile zaman aşımlı boru okuma (data_control.rs).
+rustix = { version = "1", default-features = false, features = ["std", "fs", "mm", "event"] }
+wayland-client.workspace = true
+wayland-backend.workspace = true
+wayland-egl.workspace = true
+# xdg-foreign-unstable-v2 (pencere dışa aktarma, portal ebeveyni) `unstable` altında.
+wayland-protocols = { workspace = true, features = ["unstable"] }
+# zwlr-data-control-unstable-v1 (ext-data-control-v1 olmayan compositor için yedek); sctk zaten çekiyor.
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }
+# Hyprland protokolleri (gömülü XML, protocols/) için bağlama üretimi; wayland-protocols aynı sürümü çeker.
+wayland-scanner = "0.31"
+khronos-egl.workspace = true
+# signals: SIGTERM/SIGINT/SIGHUP → App::terminate (signalfd).
+calloop = { workspace = true, features = ["signals"] }
+calloop-wayland-source = "0.4"
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
+# blob_scenes örneği: açılış yayı (Animated).
+nuxut-motion.workspace = true
+
+[lints]
+workspace = true

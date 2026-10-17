@@ -1,0 +1,50 @@
+[package]
+name = "nuxut-image-sandbox"
+description = "Güvenilmeyen görselleri ayrı, kısıtlı (seccomp + landlock + rlimit) bir yardımcı süreçte çözer (ADR-0007)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# İşçi tarafı (kilit + hizmet döngüsü + `worker_main`). Yalnızca `nuxut-image-worker` paketi
+# açar: ana süreç (Sandbox, protocol, locate) seccompiler/landlock ve JPEG XL çekmez.
+worker = ["dep:seccompiler", "dep:landlock", "dep:libc"]
+# Düşmanca test kancaları (ADR-0007 §Düşmanca test planı): işçi istek üzerine sonsuz döngüye
+# girer, dosya açar, sahte yanıt yazar… YALNIZCA testlerde açılır (aşağıdaki kendine
+# dev-bağımlılık); sürüm derlemesinde `compile_error!`.
+sandbox-test-hooks = ["worker"]
+
+[dependencies]
+# Ana süreç tarafı JPEG XL çözmez (özellik yok): tüketicinin ana ikilisine jxl-oxide girmez.
+# İşçi ikilisi (`nuxut-image-worker` paketi) `jxl`'i kendisi açar.
+nuxut-image = { workspace = true }
+tracing.workspace = true
+blake3.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rustix = { version = "1", default-features = false, features = ["std", "fs", "process", "thread", "event", "time"] }
+seccompiler = { version = "0.5", optional = true }
+landlock = { version = "0.4", optional = true }
+# Yalnızca sistem çağrısı numarası sabitleri (SYS_*, PROT_*, MAP_*); fonksiyon çağrılmaz.
+libc = { version = "0.2", optional = true }
+
+[dev-dependencies]
+# Testte kancalar açık (Cargo: paket kendine dev-bağımlılıkla özellik açabilir).
+nuxut-image-sandbox = { path = ".", features = ["sandbox-test-hooks"] }
+# Test işçisi gerçek işçiyle aynı biçimleri çözsün (JPEG XL dahil); yalnızca test derlemesi.
+nuxut-image = { workspace = true, features = ["jxl"] }
+tempfile = "3"
+# Testte PNG fikstürü kodlamak için.
+image = { workspace = true }
+
+# Kancalı TEST işçisi: yalnızca `sandbox-test-hooks` ile (bu crate'in testlerinde) derlenir.
+# Dağıtılan işçi ayrı pakettir (`crates/nuxut-image-worker`); ad farklı, `locate()` bunu bulmaz.
+[[bin]]
+name = "nuxut-image-worker-test"
+path = "src/bin/test-worker.rs"
+required-features = ["sandbox-test-hooks"]
+
+[lints]
+workspace = true

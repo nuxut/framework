@@ -1,0 +1,16 @@
+[package]
+name = "nuxut-locale"
+description = "Nuxut: ortamdan locale (zaman: LC_ALL > LC_TIME > LANG; sayı: LC_ALL > LC_NUMERIC > LANG), yerelleştirilmiş tarih/saat biçimleme, ondalık/gruplama ayırıcıları."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# `clock`: yerel saat dilimi (`format_system_time`; TZ ve /etc/localtime).
+chrono = { workspace = true, features = ["clock"] }
+pure-rust-locales.workspace = true
+
+[lints]
+workspace = true

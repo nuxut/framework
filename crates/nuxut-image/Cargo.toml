@@ -1,0 +1,55 @@
+[package]
+name = "nuxut-image"
+description = "Nuxut görselleri: çözme (PNG/JPEG/WebP/GIF/JXL), SVG, ikon teması, animasyon, asenkron yükleme, duvar kağıdı."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Güvenli seçim varsayılan: JPEG XL (jxl-oxide) yalnızca yalıtılmış işçi ikilisinde
+# (`nuxut-image-worker`) açılır; duvar kağıdı dahil kullanıcı görselleri işçide çözülür (ADR-0007).
+default = ["render"]
+# Painter'a bağlı parçalar (Wallpaper, doku dönüşümü). Palet CLI'ı bunsuz kullanır.
+render = ["dep:nuxut-render", "dep:nuxut-motion"]
+# JPEG XL (saf Rust, jxl-oxide).
+jxl = ["dep:jxl-oxide", "jxl-oxide/image"]
+# AVIF çözme: sistem dav1d kütüphanesi (C) gerekir; varsayılan kapalı.
+avif = ["image/avif-native"]
+
+[dependencies]
+nuxut-core.workspace = true
+nuxut-render = { workspace = true, optional = true }
+nuxut-motion = { workspace = true, optional = true }
+tracing.workspace = true
+thiserror.workspace = true
+dirs.workspace = true
+image = { workspace = true }
+fast_image_resize = { workspace = true }
+# Paletli PNG: indeksleri RGB(A)'ya açmadan en dar biçimde küçültmek (indexed.rs).
+png = { workspace = true }
+resvg = { workspace = true }
+roxmltree = { workspace = true }
+jxl-oxide = { workspace = true, optional = true }
+# Hyprcursor `.hlc` (ZIP) girdileri: deflate açma ve CRC-32. İkisi de `png` üzerinden zaten ağaçta.
+miniz_oxide = "0.8"
+crc32fast = "1"
+
+[target.'cfg(unix)'.dependencies]
+# Görsel dosyasını O_NONBLOCK açmak (FIFO/aygıt bloklamasın). `process`: düşük öncelikli çözme thread'i (Linux, setpriority).
+rustix = { version = "1", default-features = false, features = ["std", "fs", "process"] }
+
+[dev-dependencies]
+tempfile = "3"
+nuxut-wayland.workspace = true
+khronos-egl.workspace = true
+nuxut-theme.workspace = true
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
+
+[[example]]
+name = "wallpaper"
+required-features = ["render"]
+
+[lints]
+workspace = true

@@ -1,0 +1,56 @@
+# Gömülü metin bekçisi (ADR-0010 §4) izin listesi. Biçim (köke göreli yol, gerekçe zorunlu):
+#   dosya:çağrı()  gerekçe   — o dosyada çağrının (ad, Tür::ad, alıcı.ad) argümanları tanı metni
+#   dosya:satır    gerekçe   — tek satır (satır içinde tercih edilen: `// i18n: tanı <gerekçe>` yorumu)
+# Yapısal muafiyetler (Debug ve hata türü Display gövdeleri, #[error], XError::Varyant(..), log/panic
+# makroları, CLI ikilileri, proc-macro crate'leri, testler) izin satırı istemez. 'dosya:*' ve 'dizin/**' biçimleri
+# framework'te KULLANILMAZ (yeni UI metnini de gizler; framework_guard testi reddeder).
+# Hata/uyarı metinleri tanıdır (karar 2026-10-11): arayüz hata TÜRÜNDEN kendi anahtarıyla
+# metin üretir; e.to_string() / uyarı dizgesi arayüzde gösterilmez.
+
+# Dosya içeriği (arayüz değil): üretilen dosyaların başlık yorumu.
+crates/nuxut-apply/src/edit/managed.rs:29  üretilen dosyanın başlık yorumu (dosyaya yazılır, arayüzde gösterilmez)
+crates/nuxut-palette/src/look.rs:112  üretilen GTK 4 CSS dosyasının başlık yorumu
+crates/nuxut-palette/src/look.rs:133  üretilen GTK 3 CSS dosyasının başlık yorumu
+
+# i18n denetim kapıları: geliştiriciye test/derleme tanısı.
+crates/nuxut-i18n/src/check/mod.rs:report.error()  katalog denetimi bulguları (geliştirici tanısı)
+crates/nuxut-i18n/src/check/guard.rs:report.error()  izin listesi biçim/kullanım hataları (geliştirici tanısı)
+crates/nuxut-i18n/src/check/guard.rs:notes.push()  'dosya:*' uyarı notu (geliştirici tanısı)
+crates/nuxut-i18n/src/lib.rs:warn_once()  eksik/bozuk çeviri log uyarısı (tracing'e gider)
+
+# Config/tema doğrulama uyarıları: log + `warnings` listesi (Ayarlar gösterecekse türlü uyarı + settings- anahtarı).
+crates/nuxut-config/src/lib.rs:51  ConfigError::log_summary — yalnızca loga yazılan özet
+crates/nuxut-config/src/lib.rs:52  ConfigError::log_summary — yalnızca loga yazılan özet
+crates/nuxut-config/src/lib.rs:53  ConfigError::log_summary — yalnızca loga yazılan özet
+crates/nuxut-config/src/lib.rs:97  bilinmeyen config anahtarı uyarısı (log/tanı)
+crates/nuxut-theme/src/lib.rs:warnings.push()  tema doğrulama uyarıları (log/tanı)
+crates/nuxut-theme/src/palette.rs:warnings.push()  palet doğrulama uyarısı (log/tanı)
+
+# Ayrıştırıcı hata dizgeleri (String hata; çağıran uyarı/log olarak taşır).
+crates/nuxut-motion/src/bezier.rs:50  easing ayrıştırma hatası (tema uyarısına gömülür)
+crates/nuxut-motion/src/bezier.rs:53  easing ayrıştırma hatası (tema uyarısına gömülür)
+crates/nuxut-motion/src/bezier.rs:56  easing ayrıştırma hatası (tema uyarısına gömülür)
+crates/nuxut-motion/src/bezier.rs:59  easing ayrıştırma hatası (tema uyarısına gömülür)
+crates/nuxut-motion/src/bezier.rs:62  easing ayrıştırma hatası (tema uyarısına gömülür)
+crates/nuxut-palette/src/scheme.rs:86  şema adı ayrıştırma hatası (CLI/uyarı tanısı)
+crates/nuxut-ui/src/app_glyph.rs:err()  glif tablosu satır hatası (AppGlyphParseError Display'i, tanı)
+crates/nuxut-image/src/svg.rs:fail()  SVG güvenlik bütçesi reddi (ImageError::Svg, tanı)
+crates/nuxut-image/src/cursor.rs:invalid()  Xcursor ayrıştırma reddi (ImageError::InvalidData, tanı)
+crates/nuxut-image/src/cursor/zip.rs:invalid()  hyprcursor ZIP ayrıştırma reddi (ImageError::InvalidData, tanı)
+
+# Video/mpv tanısı.
+crates/nuxut-video/src/ffi.rs:119  libmpv yükleme hatası (VideoError::Unavailable'a gömülür, tanı)
+crates/nuxut-video/src/ffi.rs:158  libmpv sürüm hatası (VideoError::Unavailable'a gömülür, tanı)
+crates/nuxut-video/src/ffi_stub.rs:8  video desteği yok (VideoError::Unavailable, tanı)
+crates/nuxut-video/src/player.rs:296  mpv oynatma hatası (log + VideoInfo.error tanı alanı; arayüz göstermemeli)
+
+# Wayland çalışma zamanı: log alanları, IPC protokol yanıtları, açılış profili.
+crates/nuxut-wayland/src/clipboard.rs:411  pano isteği red nedeni (yalnızca tracing::debug alanı)
+crates/nuxut-wayland/src/clipboard.rs:413  pano isteği red nedeni (yalnızca tracing::debug alanı)
+crates/nuxut-wayland/src/ipc.rs:544  IPC satır sınırı hatası (protokol yanıtı, betik arayüzü)
+crates/nuxut-wayland/src/ipc.rs:550  IPC satır sınırı hatası (protokol yanıtı, betik arayüzü)
+crates/nuxut-wayland/src/ipc.rs:reply.send()  IPC hata yanıtları (protokol, betik arayüzü; çevrilmez)
+crates/nuxut-wayland/src/lib.rs:profile.mark()  açılış profili aşama adı (NUXUT_PROFILE log çıktısı)
+crates/nuxut-wayland/src/profile.rs:61  açılış profili log satırı (NUXUT_PROFILE)
+crates/nuxut-wayland/src/shm.rs:ok_or()  yazılım sunumu String hatası (tanı; yalnızca loglanır)
+crates/nuxut-wayland/src/shm.rs:map_err()  yazılım sunumu String hatası (tanı; yalnızca loglanır)

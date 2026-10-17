@@ -1,0 +1,34 @@
+[package]
+name = "nuxut-net"
+description = "Nuxut: SSRF'ye dayanıklı senkron HTTP istemcisi (adres sınıflandırma, DNS sabitleme, kökene bağlı kimlik)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = ["tls"]
+# rustls (ring) + sistem kök sertifikaları. Kapalıyken https istekleri TLS hatası verir; yalnızca
+# çapraz denetim içindir (ring'in C kodu Linux'tan Windows/macOS'a çapraz derlenemiyor).
+tls = ["ureq/rustls", "ureq/platform-verifier", "dep:rustls"]
+# Diğer crate'lerin testleri için sahte HTTP sunucusu (`testing` modülü) ve test CA'sı.
+# `tls` ile birlikte TLS sunan sahte sunucu da gelir (`FakeServer::start_tls`).
+test-support = []
+
+[dependencies]
+# Yalnız `tls` ile: ureq'in zaten çektiği rustls/ring (yeni crate yok). TLS hatalarını
+# sınıflamak (`HttpError::Tls`) ve test-support'taki sahte TLS sunucusu için.
+# ≥ 0.23.46: RUSTSEC-2026-0346..0349 (ureq aynı rustls'i kullanır; alt sınır onu da kapsar).
+rustls = { version = "0.23.46", optional = true, default-features = false, features = ["std", "ring"] }
+ureq.workspace = true
+url.workspace = true
+base64.workspace = true
+thiserror.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+flate2 = "1"
+
+[lints]
+workspace = true

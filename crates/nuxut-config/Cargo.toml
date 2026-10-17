@@ -1,0 +1,23 @@
+[package]
+name = "nuxut-config"
+description = "Nuxut config altyapısı: katmanlı TOML yükleme, doğrulama, canlı izleme."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_ignored.workspace = true
+toml.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+dirs.workspace = true
+
+# Dosya izleme Linux'ta inotify ile (ADR-0003); diğer platformlarda izleyici "kullanılamıyor".
+[target.'cfg(target_os = "linux")'.dependencies]
+inotify.workspace = true
+
+[lints]
+workspace = true

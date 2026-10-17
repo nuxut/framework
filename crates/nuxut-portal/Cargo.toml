@@ -1,0 +1,38 @@
+[package]
+name = "nuxut-portal"
+description = "Nuxut: xdg-desktop-portal istemcisi (FileChooser); sonuçlar uygulamanın olay döngüsüne döner."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# xdg-desktop-portal bir Linux masaüstü servisidir. ADR-0003 kural 2 (nuxut-video gibi): API her
+# platformda derlenir; Linux dışında her istek `PortalError::Unavailable` ile biter (zbus yok).
+# Framework'ün geri kalanı zbus'a bağlanmaz: bu crate isteğe bağlıdır (cephede `portal` özelliği).
+[dependencies]
+# İstek başına iptal kanalı (zbus'un zaten çektiği; saf Rust, her platformda).
+async-channel = "2"
+thiserror.workspace = true
+tracing.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Doğrudan zbus (ashpd değil; gerekçe DEPENDENCIES.md). Varsayılan özellikler = async-io
+# yürütücüsü; tokio yok. Shell ve takvim aynı zbus'u kullanır (ağaçta ek derleme yok).
+zbus.workspace = true
+# Sürüm sabiti (kodda kullanılmaz): zbus'ın havuzunun boşta uyanma hatası, bkz. kök Cargo.toml.
+blocking.workspace = true
+# zbus'un zaten çektiği async-io/futures-lite: istek thread'inde `block_on`, yanıt ile iptal
+# yarışı (`or`). Yeni crate değil.
+async-io = "2"
+futures-lite = "2"
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+# Örnek: pencere + xdg-foreign tanıtıcısı.
+nuxut-wayland.workspace = true
+nuxut-core.workspace = true
+nuxut-render.workspace = true
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
+
+[lints]
+workspace = true

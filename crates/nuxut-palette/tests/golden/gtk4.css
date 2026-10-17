@@ -1,0 +1,148 @@
+/* Nuxut — birleşik görünüm, GTK 4 / libadwaita (≥ 1.6, CSS değişkenleri) · elle düzenleme bir sonraki uygulamada ezilir */
+:root {
+  --accent-bg-color: #adc6ff;
+  --accent-fg-color: #102f60;
+  --accent-color: #adc6ff;
+  --destructive-bg-color: #ffb4ab;
+  --destructive-fg-color: #690005;
+  --destructive-color: #ffb4ab;
+  --success-bg-color: #5edd9c;
+  --success-fg-color: #003921;
+  --success-color: #5edd9c;
+  --warning-bg-color: #ffb785;
+  --warning-fg-color: #502500;
+  --warning-color: #ffb785;
+  --error-bg-color: #ffb4ab;
+  --error-fg-color: #690005;
+  --error-color: #ffb4ab;
+  --window-bg-color: #111318;
+  --window-fg-color: #e2e2e9;
+  --view-bg-color: #1a1b20;
+  --view-fg-color: #e2e2e9;
+  --headerbar-bg-color: #1e1f25;
+  --headerbar-fg-color: #e2e2e9;
+  --headerbar-border-color: #44474f;
+  --headerbar-backdrop-color: #111318;
+  --headerbar-shade-color: rgba(0, 0, 0, 0.36);
+  --sidebar-bg-color: #1a1b20;
+  --sidebar-fg-color: #e2e2e9;
+  --sidebar-backdrop-color: #1a1b20;
+  --sidebar-border-color: #44474f;
+  --sidebar-shade-color: rgba(0, 0, 0, 0.36);
+  --secondary-sidebar-bg-color: #1e1f25;
+  --secondary-sidebar-fg-color: #e2e2e9;
+  --secondary-sidebar-backdrop-color: #1e1f25;
+  --secondary-sidebar-border-color: #44474f;
+  --secondary-sidebar-shade-color: rgba(0, 0, 0, 0.36);
+  --card-bg-color: #1e1f25;
+  --card-fg-color: #e2e2e9;
+  --thumbnail-bg-color: #1e1f25;
+  --thumbnail-fg-color: #e2e2e9;
+  --dialog-bg-color: #282a2f;
+  --dialog-fg-color: #e2e2e9;
+  --popover-bg-color: #282a2f;
+  --popover-fg-color: #e2e2e9;
+  --overview-bg-color: #0c0e13;
+  --overview-fg-color: #e2e2e9;
+  --shade-color: rgba(0, 0, 0, 0.36);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --accent-bg-color: #445e91;
+    --accent-fg-color: #ffffff;
+    --accent-color: #445e91;
+    --destructive-bg-color: #ba1a1a;
+    --destructive-fg-color: #ffffff;
+    --destructive-color: #ba1a1a;
+    --success-bg-color: #006d43;
+    --success-fg-color: #ffffff;
+    --success-color: #006d43;
+    --warning-bg-color: #954a02;
+    --warning-fg-color: #ffffff;
+    --warning-color: #954a02;
+    --error-bg-color: #ba1a1a;
+    --error-fg-color: #ffffff;
+    --error-color: #ba1a1a;
+    --window-bg-color: #f9f9ff;
+    --window-fg-color: #1a1b20;
+    --view-bg-color: #f3f3fa;
+    --view-fg-color: #1a1b20;
+    --headerbar-bg-color: #ededf4;
+    --headerbar-fg-color: #1a1b20;
+    --headerbar-border-color: #c4c6d0;
+    --headerbar-backdrop-color: #f9f9ff;
+    --headerbar-shade-color: rgba(0, 0, 0, 0.07);
+    --sidebar-bg-color: #f3f3fa;
+    --sidebar-fg-color: #1a1b20;
+    --sidebar-backdrop-color: #f3f3fa;
+    --sidebar-border-color: #c4c6d0;
+    --sidebar-shade-color: rgba(0, 0, 0, 0.07);
+    --secondary-sidebar-bg-color: #ededf4;
+    --secondary-sidebar-fg-color: #1a1b20;
+    --secondary-sidebar-backdrop-color: #ededf4;
+    --secondary-sidebar-border-color: #c4c6d0;
+    --secondary-sidebar-shade-color: rgba(0, 0, 0, 0.07);
+    --card-bg-color: #ededf4;
+    --card-fg-color: #1a1b20;
+    --thumbnail-bg-color: #ededf4;
+    --thumbnail-fg-color: #1a1b20;
+    --dialog-bg-color: #e8e7ee;
+    --dialog-fg-color: #1a1b20;
+    --popover-bg-color: #e8e7ee;
+    --popover-fg-color: #1a1b20;
+    --overview-bg-color: #ffffff;
+    --overview-fg-color: #1a1b20;
+    --shade-color: rgba(0, 0, 0, 0.07);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-bg-color: #adc6ff;
+    --accent-fg-color: #102f60;
+    --accent-color: #adc6ff;
+    --destructive-bg-color: #ffb4ab;
+    --destructive-fg-color: #690005;
+    --destructive-color: #ffb4ab;
+    --success-bg-color: #5edd9c;
+    --success-fg-color: #003921;
+    --success-color: #5edd9c;
+    --warning-bg-color: #ffb785;
+    --warning-fg-color: #502500;
+    --warning-color: #ffb785;
+    --error-bg-color: #ffb4ab;
+    --error-fg-color: #690005;
+    --error-color: #ffb4ab;
+    --window-bg-color: #111318;
+    --window-fg-color: #e2e2e9;
+    --view-bg-color: #1a1b20;
+    --view-fg-color: #e2e2e9;
+    --headerbar-bg-color: #1e1f25;
+    --headerbar-fg-color: #e2e2e9;
+    --headerbar-border-color: #44474f;
+    --headerbar-backdrop-color: #111318;
+    --headerbar-shade-color: rgba(0, 0, 0, 0.36);
+    --sidebar-bg-color: #1a1b20;
+    --sidebar-fg-color: #e2e2e9;
+    --sidebar-backdrop-color: #1a1b20;
+    --sidebar-border-color: #44474f;
+    --sidebar-shade-color: rgba(0, 0, 0, 0.36);
+    --secondary-sidebar-bg-color: #1e1f25;
+    --secondary-sidebar-fg-color: #e2e2e9;
+    --secondary-sidebar-backdrop-color: #1e1f25;
+    --secondary-sidebar-border-color: #44474f;
+    --secondary-sidebar-shade-color: rgba(0, 0, 0, 0.36);
+    --card-bg-color: #1e1f25;
+    --card-fg-color: #e2e2e9;
+    --thumbnail-bg-color: #1e1f25;
+    --thumbnail-fg-color: #e2e2e9;
+    --dialog-bg-color: #282a2f;
+    --dialog-fg-color: #e2e2e9;
+    --popover-bg-color: #282a2f;
+    --popover-fg-color: #e2e2e9;
+    --overview-bg-color: #0c0e13;
+    --overview-fg-color: #e2e2e9;
+    --shade-color: rgba(0, 0, 0, 0.36);
+  }
+}

@@ -1,0 +1,4 @@
+target/
+# Araç çıktı dizinleri
+/*-out/
+*.swp

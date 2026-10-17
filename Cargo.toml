@@ -1,0 +1,133 @@
+[workspace]
+resolver = "3"
+# Açık liste (glob değil): yarım oluşturulmuş bir crate dizini herkesin derlemesini kırmasın.
+# Yeni crate, derlenip testleri geçince bu listeye eklenerek commit'lenir.
+members = [
+    "crates/nuxut",
+    "crates/nuxut-access",
+    "crates/nuxut-apply",
+    "crates/nuxut-config",
+    "crates/nuxut-core",
+    "crates/nuxut-i18n",
+    "crates/nuxut-i18n-macros",
+    "crates/nuxut-image",
+    "crates/nuxut-image-sandbox",
+    "crates/nuxut-image-worker",
+    "crates/nuxut-locale",
+    "crates/nuxut-motion",
+    "crates/nuxut-net",
+    "crates/nuxut-palette",
+    "crates/nuxut-portal",
+    "crates/nuxut-render",
+    "crates/nuxut-theme",
+    "crates/nuxut-ui",
+    "crates/nuxut-video",
+    "crates/nuxut-wayland",
+]
+
+[workspace.package]
+version = "0.2.0-alpha.1"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+# crates.io'ya 0.2.0-alpha.1 alfa olarak yayımlanır (yol bağımlılıkları sürüm de taşır; sıra shell docs/design/packaging.md). nuxut-image-worker yayımlanmaz.
+publish = true
+repository = "https://github.com/nuxut/framework"
+
+[workspace.dependencies]
+nuxut-core = { version = "0.2.0-alpha.1", path = "crates/nuxut-core" }
+nuxut-config = { version = "0.2.0-alpha.1", path = "crates/nuxut-config" }
+nuxut-theme = { version = "0.2.0-alpha.1", path = "crates/nuxut-theme" }
+nuxut-locale = { version = "0.2.0-alpha.1", path = "crates/nuxut-locale" }
+nuxut-motion = { version = "0.2.0-alpha.1", path = "crates/nuxut-motion" }
+nuxut-render = { version = "0.2.0-alpha.1", path = "crates/nuxut-render" }
+nuxut-wayland = { version = "0.2.0-alpha.1", path = "crates/nuxut-wayland" }
+nuxut-ui = { version = "0.2.0-alpha.1", path = "crates/nuxut-ui" }
+nuxut-image = { version = "0.2.0-alpha.1", path = "crates/nuxut-image", default-features = false }
+nuxut-image-sandbox = { version = "0.2.0-alpha.1", path = "crates/nuxut-image-sandbox" }
+nuxut-palette = { version = "0.2.0-alpha.1", path = "crates/nuxut-palette", default-features = false }
+nuxut-video = { version = "0.2.0-alpha.1", path = "crates/nuxut-video" }
+nuxut-i18n = { version = "0.2.0-alpha.1", path = "crates/nuxut-i18n" }
+nuxut-i18n-macros = { version = "0.2.0-alpha.1", path = "crates/nuxut-i18n-macros" }
+nuxut-portal = { version = "0.2.0-alpha.1", path = "crates/nuxut-portal" }
+nuxut-access = { version = "0.2.0-alpha.1", path = "crates/nuxut-access" }
+
+serde = { version = "1", features = ["derive"] }
+serde_ignored = "0.1"
+toml = "1"
+thiserror = "2"
+tracing = "0.1"
+dirs = "7"
+inotify = { version = "0.11", default-features = false }
+glow = "0.18"
+cosmic-text = "0.19"
+smithay-client-toolkit = { version = "0.21", default-features = false, features = ["calloop"] }
+wayland-client = "0.31"
+wayland-backend = { version = "0.3", features = ["client_system"] }
+wayland-egl = "0.32"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
+khronos-egl = { version = "6", features = ["dynamic"] }
+libloading = "0.8"
+calloop = "0.14"
+# nuxut-image
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif", "qoi"] }
+fast_image_resize = "6"
+# Paletli PNG indeksleri (image ile aynı sürüm; ağaçta zaten var).
+png = "0.18.1"
+resvg = { version = "0.48", default-features = false, features = ["raster-images"] }
+roxmltree = "0.21"
+# nuxut-video
+blake3 = { version = "1", default-features = false, features = ["std", "pure"] }
+rustix = { version = "1", default-features = false, features = ["std", "fs"] }
+jxl-oxide = { version = "0.12", default-features = false }
+# nuxut-net (SSRF-dayanıklı HTTP; calendar ile aynı sürümler)
+ureq = { version = "3.4", default-features = false, features = ["gzip"] }
+url = "2.5"
+base64 = "0.22"
+zeroize = "1"
+# nuxut-portal (xdg-desktop-portal istemcisi; shell/takvim ile aynı zbus, varsayılan async-io yürütücüsü)
+zbus = "5.16"
+# Yalnız sürüm sabiti (zbus'ın `unblock` havuzu; geçici): 1.7.0'da boştaki havuz thread'leri hiç
+# çıkmıyor, 500 ms'de bir uyanıyor (smol-rs/blocking #81). zbus'ı çeken crate'ler (nuxut-portal,
+# nuxut-wayland/a11y) bunu da alır; uygulamaların kilidi kendiliğinden 1.6.2'ye iner. Kaldırma
+# koşulu: DEPENDENCIES.md "Sürüm sabitleri".
+blocking = "=1.6.2"
+# nuxut-palette
+material-colors = { version = "0.4.2", default-features = false, features = ["std"] }
+# nuxut-locale (glibc locale verisi gömülü; shell ile aynı sürüm)
+chrono = { version = "0.4.45", default-features = false, features = ["std", "unstable-locales"] }
+# chrono'nun locale tipi bu crate'ın; LC_NUMERIC verisine doğrudan erişim (chrono ile aynı sürüm)
+pure-rust-locales = "0.8.2"
+# nuxut-i18n (ADR-0010; fluent-bundle 0.16 ile aynı zincir: fluent-langneg 0.13, unic-langid 0.9)
+fluent-bundle = "0.16"
+fluent-syntax = "0.12"
+fluent-langneg = "0.13"
+unic-langid = "0.9"
+unicode-segmentation = "1.12"
+intl-memoizer = "0.5"
+# Erişilebilirlik (ADR-0011): ağaç modeli (nuxut-ui) ve AT-SPI adaptörü (nuxut-wayland `a11y`).
+accesskit = "0.25"
+accesskit_unix = "0.24"
+accesskit_consumer = "0.39"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
+
+# Disk: geliştirme derlemesinde yalnızca satır tabloları (geri izleme dosya:satır verir);
+# bağımlılıklarda hata ayıklama bilgisi yok. Test profili dev'i miras alır.
+[profile.dev]
+debug = "line-tables-only"

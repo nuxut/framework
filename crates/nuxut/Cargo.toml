@@ -1,0 +1,49 @@
+[package]
+name = "nuxut"
+description = "Nuxut UI çerçevesi — cephe crate'i."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Birim testlerde runtime kimlikleri (`OutputId::for_test`, `SurfaceId::for_test`). Yalnızca
+# tüketicinin [dev-dependencies]'inde açılır; üretim ikilisinde yoktur.
+test-util = ["nuxut-wayland/test-util"]
+# xdg-desktop-portal istemcisi (dosya seçici; `nuxut::portal`). Kapalı varsayılan: zbus yalnız isteyen
+# uygulamanın ağacına girer (zbus yalnız Linux'ta; başka platformda istekler `Unavailable`).
+portal = ["dep:nuxut-portal"]
+# AT-SPI ekran okuyucu desteği (ADR-0011; Orca). Kapalı varsayılan: adaptör (zbus, +~3 MB RSS, +3 thread)
+# yalnız isteyen uygulamada. API (`nuxut::access`, `App::accessibility`) özellikten bağımsız hep vardır.
+a11y = ["nuxut-wayland/a11y"]
+
+[dependencies]
+nuxut-core.workspace = true
+nuxut-locale.workspace = true
+nuxut-i18n.workspace = true
+nuxut-motion.workspace = true
+nuxut-config.workspace = true
+nuxut-theme.workspace = true
+nuxut-render.workspace = true
+nuxut-ui.workspace = true
+nuxut-access.workspace = true
+nuxut-portal = { workspace = true, optional = true }
+
+# Wayland runtime yalnızca Linux'ta (ADR-0003); diğer platformlarda cephe çekirdek katmanları sunar,
+# platform katmanı (winit) ilk cross-platform uygulamayla gelir.
+[target.'cfg(target_os = "linux")'.dependencies]
+nuxut-wayland.workspace = true
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
+
+[lints]
+workspace = true
+
+# tests/a11y_atspi.rs (ADR-0011): yardımcı teknoloji gibi AT-SPI'den ağacı okur. atspi, accesskit_unix'in
+# zaten çektiği sürüm (yalnız proxy'ler); zbus/async-io ağaçta var. Yalnız test.
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+atspi = { version = "0.29", default-features = false, features = ["proxies"] }
+zbus.workspace = true
+async-io = "2"

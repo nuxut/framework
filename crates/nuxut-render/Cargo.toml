@@ -1,0 +1,44 @@
+[package]
+name = "nuxut-render"
+description = "Nuxut GLES 3.0 renderer'ı: SDF dikdörtgen/gölge, blob alanı, metin."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+nuxut-core.workspace = true
+glow.workspace = true
+cosmic-text.workspace = true
+# Gösterilen parolanın layout kopyaları (`TextSystem::layout_secret`, `TextLayout::wipe`) sıfırlanır.
+zeroize.workspace = true
+# cosmic-text yalnızca wght eksenini uygular; FILL/opsz için rasterleştirmeyi kendimiz yaparız
+# (cosmic-text ile aynı sürüm, kopya derlenmez).
+swash = { version = "0.2", default-features = false, features = ["scale", "render"] }
+
+tracing.workspace = true
+thiserror.workspace = true
+# Font önbelleği: konum (dirs::cache_dir) ve cosmic-text'in kendi okuduğu yerel ayar
+# (cosmic-text onu dışa açmıyor; ağaçtaki aynı sürüm).
+dirs.workspace = true
+sys-locale = "0.3"
+
+[lints]
+workspace = true
+
+# Genel aileleri kullanıcının fontconfig tercihine bağlamak için (yalnızca Linux, ADR-0003);
+# fontdb aynı sürümü çeker, fontconfig C kütüphanesi linklenmez.
+[target.'cfg(target_os = "linux")'.dependencies]
+fontconfig-parser = "0.5"
+
+[dev-dependencies]
+khronos-egl.workspace = true
+# Altın görüntü testi (tests/it/blob_golden.rs) ve geometri testlerinin isteğe bağlı görsel dökümü
+# (NUXUT_BLOB_DUMP): sahne token'ları ve PNG okuma/yazma.
+nuxut-theme.workspace = true
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+
+# font_cache_bench örneğinin --evict'i (posix_fadvise); ağaçtaki sürüm, yalnızca Linux.
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+nix = { version = "0.31", default-features = false, features = ["fs"] }

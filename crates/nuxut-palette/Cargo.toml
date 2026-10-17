@@ -1,0 +1,43 @@
+[package]
+name = "nuxut-palette"
+description = "Duvar kağıdından Material You paleti: tema rolleri, palette.toml ve GTK/Qt/terminal şablon dışa aktarımı."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "nuxut-palette"
+path = "src/main.rs"
+required-features = ["sandbox"]
+
+[features]
+default = ["image", "sandbox"]
+# Görselden kaynak renk: `source_color(&Image)`, `source_color_from_frame`, örnekleme sabitleri ve
+# `source_color_from_file(yol, çözücü, anahtar)` (çözümü verilen `IsolatedDecoder` yapar). JPEG XL
+# YOK: kullanıcı görseli yalıtılmış işçide çözülür (ADR-0007, ARCHITECTURE "Duvar kağıdı
+# yalıtımı"). Yalnızca renk/şema türetmesi isteyen tüketiciler (shell) `default-features = false`.
+image = ["dep:nuxut-image"]
+# CLI (`nuxut-palette <görsel>`): görseli duvar kağıdı profilli işçide çözer (jxl'siz ana taraf).
+sandbox = ["image", "dep:nuxut-image-sandbox"]
+
+[dependencies]
+nuxut-core.workspace = true
+nuxut-theme.workspace = true
+nuxut-image = { workspace = true, optional = true }
+nuxut-image-sandbox = { workspace = true, optional = true }
+material-colors.workspace = true
+serde.workspace = true
+toml.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+dirs.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+# Testte PNG fikstürü kodlamak için.
+image = { workspace = true }
+
+[lints]
+workspace = true

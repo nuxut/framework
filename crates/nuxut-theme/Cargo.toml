@@ -1,0 +1,21 @@
+[package]
+name = "nuxut-theme"
+description = "Nuxut tasarım token'ları: framework.toml şeması, doğrulama, Theme."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+nuxut-core.workspace = true
+nuxut-config.workspace = true
+nuxut-motion.workspace = true
+material-colors.workspace = true
+serde.workspace = true
+toml.workspace = true
+dirs.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true
