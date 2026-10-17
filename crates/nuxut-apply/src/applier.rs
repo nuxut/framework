@@ -1726,6 +1726,16 @@ fn render(slot: &FileSlot, edits: &[&Item], rules: &FileRules) -> Result<Action,
         ),
     };
     let mode = mode.unwrap_or(0o644) & 0o777;
+    // Güvenlik incelemesi "information-disclosure" (2026-10-17): bağ hedefinin ya da başka
+    // kullanıcının dosyasının içeriği kullanıcıya ait yeni bir dosyaya geçer; dosyanın grubu
+    // değişir (kaynağın grubu → kullanıcının birincil grubu). Kaynağın grup izni yeni grupta
+    // okuma yetkisi olurdu: grup bitleri düşülür (diğerleri zaten okuyabiliyordu, kalır).
+    let shared_source = match parse(&form.before) {
+        Some(FileForm::Foreign(_)) => true,
+        Some(FileForm::Symlink(_)) => !std::fs::metadata(&slot.real).is_ok_and(|m| crate::sys::owned_with_our_group(&m)),
+        _ => false,
+    };
+    let mode = if shared_source { mode & 0o707 } else { mode };
     Ok(Action::Form(match target {
         FileForm::Regular => FormAction::File {
             bytes,
@@ -1734,9 +1744,16 @@ fn render(slot: &FileSlot, edits: &[&Item], rules: &FileRules) -> Result<Action,
                 .then(|| rules.keep_to.clone())
                 .flatten(),
         },
-        FileForm::ReadOnly(m) | FileForm::Foreign(m) => FormAction::File {
+        FileForm::ReadOnly(m) => FormAction::File {
             bytes,
             mode: m,
+            keep: None,
+        },
+        // Başkasının dosyası kullanıcının sahipliğinde döner: grup bitleri düşülür (yukarıdaki
+        // bilgi sızıntısı kuralı; özgün grup geri verilemez).
+        FileForm::Foreign(m) => FormAction::File {
+            bytes,
+            mode: m & 0o707,
             keep: None,
         },
         FileForm::Symlink(t) => FormAction::Symlink(t),

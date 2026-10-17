@@ -223,3 +223,16 @@ pub fn foreign_replaceable(path: &Path) -> bool {
 pub fn foreign_replaceable(_path: &Path) -> bool {
     false
 }
+
+/// Dosya bizim ve grubu etkin grubumuz mu? Değilse içeriği kullanıcının yeni dosyasına geçerken
+/// grup izni taşınmaz (devralma; bilgi sızıntısı kuralı, 2026-10-17).
+#[cfg(unix)]
+pub fn owned_with_our_group(m: &Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    owned(m) && m.gid() == rustix::process::getegid().as_raw()
+}
+
+#[cfg(not(unix))]
+pub fn owned_with_our_group(_m: &Metadata) -> bool {
+    true
+}

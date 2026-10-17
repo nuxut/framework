@@ -3546,7 +3546,12 @@ Değişmezler:
     bağlı düz dosya; başka kullanıcıya ait düz dosya da (2026-10-17), okunabiliyorsa ve ata dizin
     yazılabilir, yapışkan değil ya da bizimse (`sys::foreign_replaceable`; kök gerekmez, `rename`
     dizin iznidir) — geri yükleme içeriği ve izni geri koyar, sahip kullanıcı olur (kök olmadan
-    sahiplik geri verilemez). Devralınamaz (`ExternallyManaged`): okunamayan ya da başkasının
+    sahiplik geri verilemez). Bilgi sızıntısı kuralı (güvenlik incelemesi 2026-10-17): başkasının
+    dosyasının ya da başka sahip/gruptaki bağ hedefinin içeriği kullanıcının dosyasına geçerken
+    (devralma da geri yükleme de) grup bitleri düşülür — grup değiştiği için kaynağın grup izni
+    yeni grupta okuma yetkisi olurdu; içerik hiçbir sonuç ya da hata metnine girmez (test
+    `takeover_never_widens_group_access_or_leaks_content`). Devralınamaz (`ExternallyManaged`):
+    okunamayan ya da başkasının
     yapışkan dizinindeki yabancı dosya, `store`
     (nix/guix; bildirimsel yapılandırma), `dir_not_writable`. Biçim parçası istekte verilemez
     (`Invalid`); `take_over` yolu istekteki bir dosya parçasının yolu olmalı. Bilinen sınırlar:

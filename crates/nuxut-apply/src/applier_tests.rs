@@ -3248,7 +3248,7 @@ fn take_over_foreign_plain_file_by_rename_and_restore() {
         "{r:?}"
     );
     assert_eq!(fs::read_to_string(&file).unwrap(), original);
-    assert_eq!(ino_mode_nlink(&file).1 & 0o777, 0o640, "izin geri geldi");
+    assert_eq!(ino_mode_nlink(&file).1 & 0o777, 0o600, "izin geri geldi, grup bitleri düşülerek (sahip değişti)");
 
     // Okunamayan dosya ya da başkasının yapışkan dizinindeki dosya devralınmaz.
     fs::set_permissions(&file, fs::Permissions::from_mode(0o000)).unwrap();
@@ -3272,4 +3272,48 @@ fn take_over_foreign_plain_file_by_rename_and_restore() {
         Some(FileForm::Foreign(0o640))
     );
     assert!(FileForm::parse("foreign:7777").is_none());
+}
+
+/// Güvenlik incelemesi "information-disclosure" (2026-10-17): grup izniyle okunabilen bir
+/// kaynağın (bağ hedefi ya da başkasının dosyası) içeriği kullanıcıya ait yeni dosyaya geçince
+/// grup değişir; yeni dosya grup bitlerini taşımaz. İçerik hiçbir sonuca/hata metnine girmez.
+#[test]
+fn takeover_never_widens_group_access_or_leaks_content() {
+    let secret = "SAHTE-GİZLİ-7f3a9c";
+    let fx = Fx::new();
+    use std::os::unix::fs::MetadataExt;
+    // Bağ: hedef başkasının ve 0640 (gruba açık; testte inode kancası); devralınan dosya grubu
+    // okuyamaz. Kendi grubumuzdaki kendi dosyamıza bağda izin aynen kalır (önceki testler).
+    let target = fx.cfg("themes/Kilitli/gtk.css");
+    fs::create_dir_all(target.parent().unwrap()).unwrap();
+    fs::write(&target, format!("/* {secret} */\n")).unwrap();
+    fs::set_permissions(&target, fs::Permissions::from_mode(0o640)).unwrap();
+    let css = fx.cfg("gtk-4.0/gtk.css");
+    fs::create_dir_all(css.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink(&target, &css).unwrap();
+    crate::sys::TEST_FOREIGN_INO.with(|c| c.set(Some(fs::metadata(&target).unwrap().ino())));
+    let line = Fragment::Line { file: css.clone(), marker: "@import 'nuxut.css';".into(), at: Position::Start };
+    let o = fx.app.apply(change("look.css", vec![(line, text("@import 'nuxut.css';"))]).take_over(&css));
+    crate::sys::TEST_FOREIGN_INO.with(|c| c.set(None));
+    assert!(!format!("{o:?}").contains(secret), "sonuç içerik taşımaz");
+    assert!(matches!(o, Outcome::Applied { .. }), "{o:?}");
+    assert_eq!(ino_mode_nlink(&css).1 & 0o070, 0, "grup okuyamaz");
+    assert_eq!(ino_mode_nlink(&target).1 & 0o777, 0o640, "hedefe dokunulmaz");
+
+    // Başkasının 0640 dosyası: devralma ve geri yükleme grup bitsiz.
+    let file = fx.cfg("kdeglobals");
+    fs::write(&file, format!("[G]\nK={secret}\n")).unwrap();
+    fs::set_permissions(&file, fs::Permissions::from_mode(0o640)).unwrap();
+    let ino = fs::metadata(&file).unwrap().ino();
+    crate::sys::TEST_FOREIGN_INO.with(|c| c.set(Some(ino)));
+    let line = Fragment::Line { file: file.clone(), marker: "# nuxut".into(), at: Position::Start };
+    let o = fx.app.apply(change("look.kde", vec![(line, text("# nuxut"))]).take_over(&file));
+    crate::sys::TEST_FOREIGN_INO.with(|c| c.set(None));
+    assert!(!format!("{o:?}").contains(secret));
+    let id = applied(o);
+    assert_eq!(ino_mode_nlink(&file).1 & 0o070, 0);
+    fx.advance(10_000);
+    let r = fx.app.restore(&id, RestoreMode::Safe);
+    assert!(!format!("{r:?}").contains(secret));
+    assert_eq!(ino_mode_nlink(&file).1 & 0o777, 0o600);
 }
