@@ -112,6 +112,12 @@ kaynak şarttı. Açıklama metinleri özet; dosyadaki not bunu söyler. Lisans 
      `false`: bildirmeyen uygulamada yalnız kendi kilidi geçerlidir. `LockedHint` kilitleyicinin
      kendi bildirimidir, kilidin kanıtı değildir; yalnız ek reddetme sebebi olarak kullanılır,
      yakalamaya izin vermek için kullanılmaz.
+   - **Kapalı-güvenli bildirim (2026-10-17, güvenlik incelemesi):** kilit durumunu izleyen uygulama
+     belirsizliği kilit sayar: izlemeye başlarken `true` bildirir, yalnız logind'den okunmuş
+     `LockedHint = false` ile `false`'a çeker; logind yok, oturum çözülemedi, okuma hatası, bağlantı
+     koptu ya da yanıt gecikti → `true` kalır (ekran paylaşım seçicisi böyle; ayrıca isteği reddeder).
+     Runtime varsayılanı `false` kalır: kilidi izlemeyen uygulamalarda (kendi kilidi geçerli)
+     varsayılanı `true` yapmak yakalamayı kalıcı kapatırdı.
 
    Kapı kapalıyken: yeni istek `Locked`; kapı kapandığı anda yürüyen işler `Locked` ile biter
    (Wayland nesneleri bırakılır), kuyruktakiler yuvaya geçtikçe `Locked` alır, çevirme thread'inde

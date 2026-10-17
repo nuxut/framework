@@ -536,7 +536,9 @@ impl<A: App> Context<A> {
     /// Oturumun dışarıdan (başka bir kilitleyici, `loginctl lock-session`) kilitli olduğunu
     /// bildirir; kaynak logind `LockedHint`'idir ve onu izlemek uygulamanın işidir (runtime D-Bus'a
     /// bağlanmaz). `true` iken yeni yakalama `Locked`, yürüyen ve kuyruktaki işler `Locked` ile
-    /// biter, çevrilmekte olan kare teslim edilmez. Varsayılan `false`.
+    /// biter, çevrilmekte olan kare teslim edilmez. Varsayılan `false`. Kapalı-güvenli kullanım:
+    /// izlemeye başlarken `true`, yalnız okunmuş "kilitsiz" ile `false`; durum okunamıyorsa `true`
+    /// kalır (capture.md §4).
     pub fn set_session_locked_hint(&mut self, locked: bool) {
         if self.captures.locked_hint == locked {
             return;
