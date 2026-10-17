@@ -55,7 +55,10 @@ impl ExternalReason {
     /// Bu nedenle dışarıdan yönetilen `path` [`crate::Change::take_over`] ile devralınabilir mi?
     /// `path`'in kendisi symlink'se (son bileşen) hedefi ne olursa olsun (başka sahip, salt okunur,
     /// kırık) devralınır: bağın kendisi Nuxut'un düz dosyasıyla değiştirilir, hedefe dokunulmaz
-    /// (ör. `gtk.css` → `/usr/share/themes/…`). Düz dosyada yalnızca salt okunur ve sabit bağ.
+    /// (ör. `gtk.css` → `/usr/share/themes/…`). Düz dosyada salt okunur, sabit bağ ve başka
+    /// kullanıcının dosyası (okunabiliyor ve dizini yeniden adlandırmaya izin veriyorsa:
+    /// [`sys::foreign_replaceable`]; kök gerekmez, 2026-10-17). Başkasının dosyası geri alınınca
+    /// içerik ve izin döner, sahip kullanıcının olur (kök olmadan sahiplik geri verilemez).
     /// Depo (nix/guix; bildirimsel yapılandırma) ve yazılamayan dizin hiç devralınmaz.
     pub fn can_take_over(self, path: &Path) -> bool {
         match self {
@@ -63,9 +66,13 @@ impl ExternalReason {
             ExternalReason::SymlinkBroken | ExternalReason::ReadOnly | ExternalReason::HardLink => {
                 true
             }
-            ExternalReason::NotOwned | ExternalReason::Unknown => {
-                std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink())
-            }
+            ExternalReason::NotOwned | ExternalReason::Unknown => std::fs::symlink_metadata(path)
+                .is_ok_and(|m| {
+                    m.file_type().is_symlink()
+                        || (self == ExternalReason::NotOwned
+                            && m.is_file()
+                            && sys::foreign_replaceable(path))
+                }),
         }
     }
 }
@@ -143,7 +150,7 @@ pub(crate) fn nofollow_real(path: &Path) -> Result<PathBuf, ApplyError> {
 }
 
 /// Yolun şu anki biçimi (`lstat`; son bileşen izlenmez). Yok → `Absent`. Başka kullanıcıya ait
-/// düz dosya → `ExternallyManaged` (devralınamaz).
+/// düz dosya → `Foreign(izin)` (yeniden adlandırılabiliyorsa), değilse `ExternallyManaged`.
 pub(crate) fn form_of(real: &Path) -> Result<FragValue, ApplyError> {
     let m = match std::fs::symlink_metadata(real) {
         Ok(m) => m,
@@ -159,7 +166,10 @@ pub(crate) fn form_of(real: &Path) -> Result<FragValue, ApplyError> {
     } else if !m.is_file() {
         return Err(ApplyError::Invalid("hedef düz dosya değil"));
     } else if !sys::owned(&m) {
-        return Err(ApplyError::ExternallyManaged(real.to_path_buf()));
+        if !sys::foreign_replaceable(real) {
+            return Err(ApplyError::ExternallyManaged(real.to_path_buf()));
+        }
+        FileForm::Foreign(sys::mode(&m) & 0o777)
     } else if sys::identity(&m).2 > 1 {
         FileForm::HardLink
     } else if sys::mode(&m) & 0o200 == 0 {

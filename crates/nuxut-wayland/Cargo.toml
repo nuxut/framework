@@ -11,6 +11,10 @@ publish.workspace = true
 # Birim testlerde runtime kimlikleri (`OutputId::for_test`, `SurfaceId::for_test`); yalnızca
 # dev-dependency olarak açılır (gerçek kimlikleri compositor/runtime verir).
 test-util = []
+# YALNIZ canlı test (debug derlemesi): `NUXUT_TEST_TOUCH` FIFO'sundan sentetik dokunma
+# (`test_touch.rs`). Başsız sway'de dokunmatik koltuk/sanal dokunma protokolü yok; sürüm
+# derlemesinde derleme hatası.
+test-touch = []
 # AT-SPI erişilebilirliği (ADR-0011): yüzey başına accesskit_unix adaptörü (zbus, async-io). Kapalıyken
 # adaptör ve D-Bus bağlantısı hiç yoktur; `App::accessibility` çağrılmaz.
 a11y = ["dep:accesskit_unix", "dep:blocking"]

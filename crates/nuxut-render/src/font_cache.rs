@@ -68,6 +68,7 @@ pub(crate) fn disabled() -> bool {
 // ---------------------------------------------------------------------------------------------
 
 /// Taramadan ÖNCE alınır: tarama sırasında eklenen bir font bir sonraki açılışta yakalanır.
+#[cfg(not(target_os = "linux"))]
 pub(crate) fn current_records() -> Vec<Record> {
     let mut records = Vec::new();
     let mut seen = std::collections::HashSet::new();
@@ -75,6 +76,36 @@ pub(crate) fn current_records() -> Vec<Record> {
         walk_dirs(&dir, &mut records, &mut seen, 0);
     }
     records
+}
+
+/// Tam tarama: geçersizleştirme kayıtları (taramadan ÖNCE) + `FontSystem::new()`in kuracağı
+/// veritabanının aynısı. Linux'ta dosyalar paralel ayrıştırılır (`font_scan`); fontconfig bir kez
+/// okunur. `reuse` verilirse değişmemiş dizinlerdeki dosyalar yeniden ayrıştırılmaz (Linux).
+pub(crate) fn scan(reuse: Option<Reuse>) -> (Vec<Record>, Database) {
+    #[cfg(target_os = "linux")]
+    {
+        let mut records = Vec::new();
+        let (dirs, aliases) = fontconfig_setup(&mut records);
+        let mut seen = std::collections::HashSet::new();
+        for dir in &dirs {
+            walk_dirs(dir, &mut records, &mut seen, 0);
+        }
+        let mut db = crate::font_scan::system_database(&dirs, &aliases, reuse);
+        // cosmic-text `FontSystem::new_with_fonts` ile aynı sabit varsayılanlar.
+        // font-istisnası: cosmic-text'in veritabanının birebir kopyası (sonra resolve_generic_families ezer)
+        db.set_monospace_family("Noto Sans Mono");
+        // font-istisnası: aynı
+        db.set_sans_serif_family("Open Sans");
+        // font-istisnası: aynı
+        db.set_serif_family("DejaVu Serif");
+        (records, db)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        drop(reuse);
+        let records = current_records();
+        (records, cosmic_text::FontSystem::new().into_locale_and_db().1)
+    }
 }
 
 /// Dizini ve tüm alt dizinlerini (yalnızca dizinler) kaydeder. Döngülere karşı kanonik yol
@@ -111,10 +142,10 @@ fn walk_dirs(
     }
 }
 
-/// Font kök dizinleri; Linux'ta fontdb'nin yaptığı gibi fontconfig'ten (config dosyaları da
-/// kayıtlara eklenir), diğer platformlarda fontdb'nin sabit listeleri.
+/// Linux: font kök dizinleri fontdb'nin yaptığı gibi fontconfig'ten (config dosyaları da
+/// kayıtlara eklenir) ve fontconfig takma adları (genel aileler; fontdb bunlardan kurar).
 #[cfg(target_os = "linux")]
-fn font_roots(records: &mut Vec<Record>) -> Vec<PathBuf> {
+fn fontconfig_setup(records: &mut Vec<Record>) -> (Vec<PathBuf>, Vec<fontconfig_parser::Alias>) {
     let mut fc = fontconfig_parser::FontConfig::default();
     let home = std::env::var_os("HOME").map(PathBuf::from);
     // fontdb::Database::load_fontconfig ile aynı sıra ve seçim.
@@ -176,9 +207,10 @@ fn font_roots(records: &mut Vec<Record>) -> Vec<PathBuf> {
             dirs.push(h.join(".local/share/fonts"));
         }
     }
-    dirs
+    (dirs, fc.aliases)
 }
 
+/// Linux dışı: fontdb'nin sabit font dizini listeleri.
 #[cfg(target_os = "macos")]
 fn font_roots(_records: &mut Vec<Record>) -> Vec<PathBuf> {
     let mut dirs: Vec<PathBuf> = vec![
@@ -228,23 +260,73 @@ fn font_roots(_records: &mut Vec<Record>) -> Vec<PathBuf> {
 // Yükleme
 // ---------------------------------------------------------------------------------------------
 
-/// Geçerli önbellekten fontdb veritabanı kurar; yoksa/geçersizse `None` (tam tarama yapılır).
-pub(crate) fn load() -> Option<Database> {
+/// Önbellek okuma sonucu.
+pub(crate) enum Loaded {
+    /// Tüm kayıtlar güncel: veritabanı dosya ayrıştırmadan kuruldu.
+    Fresh(Database),
+    /// Eski: değişmemiş dizinlerdeki yüzler yeniden kullanılır, gerisi taranır.
+    Stale(Reuse),
+    /// Yok, bozuk, uyumsuz ya da devre dışı: tam tarama.
+    Missing,
+}
+
+/// Önbelleği okur ve kayıtları denetler.
+pub(crate) fn load() -> Loaded {
     if disabled() {
         tracing::debug!("NUXUT_NO_FONT_CACHE: font önbelleği atlandı");
-        return None;
+        return Loaded::Missing;
     }
-    let path = cache_path()?;
-    let bytes = read_limited(&path)?;
+    let Some(path) = cache_path() else { return Loaded::Missing };
+    let Some(bytes) = read_limited(&path) else { return Loaded::Missing };
     let Some(snapshot) = decode(&bytes) else {
         tracing::debug!(path = %path.display(), "font önbelleği bozuk ya da uyumsuz; tam tarama");
-        return None;
+        return Loaded::Missing;
     };
-    if let Some(stale) = snapshot.records.iter().find(|r| mtime(&r.path) != r.mtime) {
-        tracing::debug!(changed = %stale.path.display(), "font önbelleği eski; tam tarama");
-        return None;
+    classify(snapshot)
+}
+
+/// Kayıtlara göre taze/eski ayrımı (dosya sisteminden mtime okur).
+fn classify(snapshot: Snapshot) -> Loaded {
+    // Aynı yol birden çok kayıtta olabilir (ör. fontconfig adayı aynı zamanda birleştirilen
+    // dosya): tazelik sayıyla değil kayıt kayıt denetlenir. Sayıyla denetim yinelenen yolda her
+    // açılışı "eski" sayıyordu (2026-10-17 ölçümünde bulundu: her açılış eski yoldan kurulup
+    // önbelleği yeniden yazıyordu).
+    let stale: Vec<&Record> = snapshot.records.iter().filter(|r| mtime(&r.path) != r.mtime).collect();
+    if stale.is_empty() {
+        return Loaded::Fresh(snapshot.into_database());
     }
-    Some(snapshot.into_database())
+    tracing::debug!(
+        changed = stale.len(),
+        first = %stale[0].path.display(),
+        "font önbelleği eski; değişen dizinler taranacak"
+    );
+    let changed: std::collections::HashSet<PathBuf> = stale.iter().map(|r| r.path.clone()).collect();
+    let fresh: std::collections::HashSet<PathBuf> =
+        snapshot.records.iter().filter(|r| !changed.contains(&r.path)).map(|r| r.path.clone()).collect();
+    let mut faces: std::collections::HashMap<PathBuf, Vec<FaceRec>> = Default::default();
+    for f in snapshot.faces {
+        faces.entry(f.path.clone()).or_default().push(f);
+    }
+    Loaded::Stale(Reuse { fresh, faces })
+}
+
+/// Eski önbellekten yeniden kullanılabilir yüzler: dosyanın bulunduğu dizinin kaydı
+/// değişmediyse (dosya eklenmedi/silinmedi/yeniden adlandırılmadı) önceki ayrıştırma geçerlidir.
+/// Yerinde değiştirme sınırı tam önbellekle aynıdır (modül belgesi).
+pub(crate) struct Reuse {
+    fresh: std::collections::HashSet<PathBuf>,
+    faces: std::collections::HashMap<PathBuf, Vec<FaceRec>>,
+}
+
+impl Reuse {
+    /// Dosyanın önceki yüzleri (sırasıyla); dizini değiştiyse ya da dosya bilinmiyorsa `None`.
+    pub(crate) fn take(&mut self, file: &Path) -> Option<Vec<FaceInfo>> {
+        if !self.fresh.contains(file.parent()?) {
+            return None;
+        }
+        let faces = self.faces.remove(file)?;
+        Some(faces.into_iter().map(FaceRec::into_face_info).collect())
+    }
 }
 
 fn read_limited(path: &Path) -> Option<Vec<u8>> {
@@ -269,6 +351,39 @@ struct FaceRec {
     weight: u16,
     stretch: u8,
     monospaced: bool,
+}
+
+impl FaceRec {
+    fn into_face_info(self) -> FaceInfo {
+        FaceInfo {
+            id: fontdb::ID::dummy(),
+            source: Source::File(self.path),
+            index: self.index,
+            families: self
+                .families
+                .into_iter()
+                .map(|(n, en)| {
+                    (
+                        n,
+                        if en {
+                            Language::English_UnitedStates
+                        } else {
+                            Language::Unknown
+                        },
+                    )
+                })
+                .collect(),
+            post_script_name: self.post_script_name,
+            style: match self.style {
+                1 => Style::Italic,
+                2 => Style::Oblique,
+                _ => Style::Normal,
+            },
+            weight: Weight(self.weight),
+            stretch: u8_to_stretch(self.stretch),
+            monospaced: self.monospaced,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -327,34 +442,7 @@ impl Snapshot {
     fn into_database(self) -> Database {
         let mut db = Database::new();
         for f in self.faces {
-            db.push_face_info(FaceInfo {
-                id: fontdb::ID::dummy(),
-                source: Source::File(f.path),
-                index: f.index,
-                families: f
-                    .families
-                    .into_iter()
-                    .map(|(n, en)| {
-                        (
-                            n,
-                            if en {
-                                Language::English_UnitedStates
-                            } else {
-                                Language::Unknown
-                            },
-                        )
-                    })
-                    .collect(),
-                post_script_name: f.post_script_name,
-                style: match f.style {
-                    1 => Style::Italic,
-                    2 => Style::Oblique,
-                    _ => Style::Normal,
-                },
-                weight: Weight(f.weight),
-                stretch: u8_to_stretch(f.stretch),
-                monospaced: f.monospaced,
-            });
+            db.push_face_info(f.into_face_info());
         }
         let [serif, sans, cursive, fantasy, mono] = self.generics;
         db.set_serif_family(serif);
@@ -676,6 +764,58 @@ mod tests {
         huge.u64(sum);
         assert!(decode(&huge.0).is_none());
         assert!(decode(&[]).is_none());
+    }
+
+    /// Yinelenen yol önbelleği eski saydırmaz; gerçekten değişen kayıt saydırır.
+    #[test]
+    fn duplicate_records_stay_fresh() {
+        let dir = std::env::temp_dir();
+        let snap = |extra: Option<Record>| {
+            let mut records = vec![record(dir.clone()), record(dir.clone())];
+            records.extend(extra);
+            Snapshot { records, generics: Default::default(), faces: Vec::new() }
+        };
+        assert!(matches!(classify(snap(None)), Loaded::Fresh(_)));
+        let moved = Record { path: dir.clone(), mtime: mtime(&dir).wrapping_add(1) };
+        assert!(matches!(classify(snap(Some(moved))), Loaded::Stale(_)));
+    }
+
+    /// Eski önbellekte değişmemiş dizinin yüzleri ayrıştırılmadan alınır, değişmiş dizininki
+    /// yeniden ayrıştırılır; sıra tam taramayla aynı kalır.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn stale_cache_reparses_only_changed_dirs() {
+        let (records, db) = scan(None);
+        let snapshot = Snapshot::from_db(&db, records);
+        let first = snapshot.faces.first().expect("test makinesinde font yok").path.clone();
+        let changed_dir = first.parent().unwrap().to_owned();
+        // Değişmemiş dizindeki bir yüzü ve değişen dizindeki ilk yüzü işaretle.
+        let other = snapshot
+            .faces
+            .iter()
+            .position(|f| f.path.parent() != Some(changed_dir.as_path()))
+            .expect("ikinci font dizini yok");
+        let mut faces: std::collections::HashMap<PathBuf, Vec<FaceRec>> = Default::default();
+        for (i, mut f) in snapshot.faces.into_iter().enumerate() {
+            if i == 0 || i == other {
+                f.post_script_name = format!("isaret-{i}");
+            }
+            faces.entry(f.path.clone()).or_default().push(f);
+        }
+        let fresh = snapshot
+            .records
+            .iter()
+            .map(|r| r.path.clone())
+            .filter(|p| *p != changed_dir)
+            .collect();
+        let (_, rebuilt) = scan(Some(Reuse { fresh, faces }));
+        let names = |db: &Database| -> Vec<String> {
+            db.faces().map(|f| format!("{:?}#{}", f.source, f.index)).collect()
+        };
+        assert_eq!(names(&db), names(&rebuilt));
+        let ps: Vec<&str> = rebuilt.faces().map(|f| f.post_script_name.as_str()).collect();
+        assert!(!ps.contains(&"isaret-0"), "değişen dizin yeniden ayrıştırılmalı");
+        assert!(ps.contains(&format!("isaret-{other}").as_str()), "değişmemiş dizin önbellekten");
     }
 
     #[test]

@@ -147,8 +147,15 @@ fn hostile_svg_corpus_fails_safely_and_pool_recovers() {
     }
     let ok = sb.decode(0, red_svg(), &icon_opts(32)).unwrap();
     assert_eq!(ok.size(), (32, 32));
-    let (_, zombies) = children();
-    assert_eq!(zombies, 0);
+    // Kullanılmış işçiyi temizlikçi thread öldürüp bekler (kill → wait): çocuk ölünce çekirdek onu
+    // `Z` yapar, bekleyen thread uyanıp toplayana dek (yük altında birkaç ms) anlık örnekleme bir
+    // zombi görebilir — her çocuğun geçtiği durum, sızıntı değil (2026-10-17 inceleme: bütün
+    // yollar `process::reap` ile bekler). Sızıntı = kısa sürede oturmayan zombi ya da girdi görmüş
+    // canlı işçi.
+    only_fresh_children(&sb);
+    // Kesin sınır: Sandbox kapanınca (temizlikçi join edilir) ne çocuk ne zombi kalır; bekleme yok.
+    drop(sb);
+    assert_eq!(children(), (0, 0), "Sandbox kapandıktan sonra işçi ya da zombi kaldı");
 }
 
 /// Kısa zaman aşımlı Sandbox'ta meşru çözüm: aç kalan/dondurulan test sürecinde 400 ms'yi aşıp

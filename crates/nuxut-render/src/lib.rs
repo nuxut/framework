@@ -12,6 +12,8 @@ mod gradient;
 mod stroke;
 mod error;
 mod font_cache;
+#[cfg(target_os = "linux")]
+mod font_scan;
 mod painter;
 mod record;
 mod renderer;

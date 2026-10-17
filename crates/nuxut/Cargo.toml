@@ -17,6 +17,9 @@ portal = ["dep:nuxut-portal"]
 # AT-SPI ekran okuyucu desteği (ADR-0011; Orca). Kapalı varsayılan: adaptör (zbus, +~3 MB RSS, +3 thread)
 # yalnız isteyen uygulamada. API (`nuxut::access`, `App::accessibility`) özellikten bağımsız hep vardır.
 a11y = ["nuxut-wayland/a11y"]
+# YALNIZ canlı test (debug): `NUXUT_TEST_TOUCH` FIFO'sundan sentetik dokunma (nuxut-wayland
+# `test_touch`); sürüm derlemesinde derleme hatası.
+test-touch = ["nuxut-wayland/test-touch"]
 
 [dependencies]
 nuxut-core.workspace = true

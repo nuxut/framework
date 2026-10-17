@@ -227,6 +227,9 @@ Leave`, compositor iptali → yalnız `Leave`; basılı ve kımıldamayan birinc
 `TOUCH_TAP_DELAY` sonra aynı konumda tek `Motion` (bekleme tiki). Diğer temaslar yalnız
 `App::touch`'a gelir; en çok 16 temas. Dokunmada imleç şekli değişmez, hover yalnız parmak
 basılıyken. Dokunma serial'ı son girdi sayılır (move/resize, etkinleştirme, pano).
+Canlı test için `test-touch` özelliği (`nuxut/test-touch`, yalnız debug; sürümde derleme hatası):
+`NUXUT_TEST_TOUCH=<fifo>` satırlarından (`down ID NS X Y`, `motion ID X Y`, `up ID`, `cancel`)
+sentetik temas, `wl_touch` ile aynı yoldan (`docs/design/touch.md` "Sentetik dokunma").
 
 ```rust
 pub struct PointerEvent { pub position: Point, pub kind: PointerKind, pub source: PointerSource }
@@ -1663,6 +1666,11 @@ dizinlerinin mtime'ı; sürüm etiketi `fontdb-0.23+cosmic-text-0.19` + biçim s
 uyumsuz dosya sessizce tam tarama (sınırlar: 8 MiB, sağlama toplamı). Yazım atomik, 0600.
 **Bilinen sınır:** yeniden adlandırılmadan yerinde değiştirilen font dosyası fark edilmez.
 Kaçış: `NUXUT_NO_FONT_CACHE=1` (okumaz, tam tarar, yeniden yazar) ya da dosyayı silmek.
+Linux'ta (`font_scan.rs`, `docs/design/font-cold-start.md`): tam tarama fontdb ile aynı sıra ve
+sonuçla paralel ayrıştırır; eski önbellekte kaydı değişmemiş dizinlerin yüzleri yeniden kullanılır,
+yalnızca değişen dizinler taranır; `TextSystem::new` sonunda kısa ömürlü bir iş parçacığı font
+dosyalarının başını `fadvise(WILLNEED)` ile ister (cosmic-text'in her yeni öznitelikte tüm yüzlere
+bakması soğuk diskte ilk şekillendirmeyi bekletmesin).
 
 ```rust
 pub struct TextStyle { pub family: String, pub size: f32, pub weight: u16,
@@ -2284,6 +2292,13 @@ pub const EXIT_LOCKDOWN: i32 = 70; pub const EXIT_PROTOCOL: i32 = 65;   // işç
   kalıyordu. `prewarm: 0` ön ısıtmayı kapatır. **30 sn sonra: süreç yok, thread yok, CPU 0.**
   Ebeveyn borular bloklamasız + `poll` son tarihi; zaman aşımı/çökme → `Child::kill` + `wait`
   (zombi yok).
+  Zombi incelemesi (2026-10-17, `hostile_svg_corpus` testinde ara sıra görülen zombi): bütün
+  yollar (`kill`, `kill_classify`, `Worker::drop`, temizlikçi) `process::reap` ile bekler; işçi
+  isteği yanıtladıktan sonra kendiliğinden çıkmaz, temizlikçi öldürene dek canlıdır. Görülen
+  zombi, temizlikçi thread'in `kill` ile `wait` arasındaki anıdır (çocuk ölünce çekirdek onu
+  `Z` yapar, yük altında bekleyen thread birkaç ms geç uyanır): her çocuğun geçtiği durum,
+  sızıntı değil. Test bu yüzden zombinin kısa sürede oturmasını bekler ve Sandbox kapanınca
+  (temizlikçi join edilir) beklemesiz kesin sıfır çocuk/zombi ister.
 - **`<image href>` / dış kaynak:** işçide de süreç içinde de tek nokta `svg::usvg_options()`:
   `resources_dir: None`, `href` dize çözücüsü her şemada (`file:`, mutlak/göreli yol, `http(s):`,
   `ftp:`, `//host`, …) hiçbir şey açmadan `None` (usvg'nin dosya okuyan varsayılan çözücüsü hiç
@@ -2695,6 +2710,12 @@ pub enum BudgetExceeded { Duration { actual, limit }, Frames { actual, limit } }
      `/proc/self/task/*/children`'ın önceki hâline döndüğünü ve geçici dosya kalmadığını
      doğrular. Sınır: tek bir karenin çözümü takılırsa `terminate_destroy` onu bekler
      (süreç içi kütüphane öldürülemez; kare boyutu `Limits` ile sınırlı).
+     Test kararlılığı (2026-10-17): test eskiden 800 ms'lik son tarihin kodlama sürerken dolacağını
+     duvar saatine bırakıyordu; yük altında mpv ilk ilerlemeyi son tarihten önce veremeyince
+     "ilerleme > 0,05" iddiası düşüyordu (ürün doğru davranıyordu: zaman aşımı, temizlik tam).
+     Test artık ilk gerçek ilerlemede geri çağırmada `timeout` kadar bekler (son tarih o anda
+     kesin dolmuştur); kodlama son tarihe hiç yetişmezse süre ikiye katlanıp yeniden denenir,
+     her denemede temizlik aynı biçimde doğrulanır.
 - VA-API yoklaması: her aday codec için küçük bir test klibi kodlanıp `hwdec=vaapi`, `vo=null`
   ile açılır, `hwdec-current` okunur; sonuç `$XDG_CACHE_HOME/nuxut/hwcaps.toml`'da saklanır.
 - **Donanım çözme yoksa** (`capabilities().software_only()`): 1080p30 yazılım çözme bu VM'de
@@ -3512,7 +3533,7 @@ Değişmezler:
     (2026-10-16): Nuxut çağıranları devralmayı **varsayılan** yapar — onay beklemeden, yedekli
     (snapshot), geri alınabilir. `apply` kilit altında `external_reason(yol)`'a bakar: neden yok →
     etkisiz; `ExternalReason::can_take_over(yol)` → işleme `Fragment::FileForm { file }` girer
-    (önce: özgün biçim `symlink:<readlink metni>` | `mode:<sekizli>` | `hardlink`; sonra:
+    (önce: özgün biçim `symlink:<readlink metni>` | `mode:<sekizli>` | `hardlink` | `foreign:<sekizli>`; sonra:
     `regular`), yol **son bileşeni izlenmeden** aynı dizinde geçici girdi + `rename` ile Nuxut'un
     düz dosyasına çevrilir (symlink → hedef içeriğinin kopyası, salt okunur → izin `| u+w`, sabit
     bağ → bağı koparan kopya; özgün inode `snapshots/<id>/keep-<yol özeti>` bağında tutulur) ve
@@ -3522,7 +3543,11 @@ Değişmezler:
     bayt bayt), sabit bağ tutulan inode'a yeni bağla yeniden kurulur. Devralınabilir: son bileşeni
     symlink olan her yol (hedef kırık, salt okunur ya da başka kullanıcıya ait olsa da; ör.
     `gtk-4.0/gtk.css` → `/usr/share/themes/Dracula/…`, neden `not_owned`), salt okunur ve sabit
-    bağlı düz dosya. Devralınamaz (`ExternallyManaged`): başka kullanıcıya ait düz dosya, `store`
+    bağlı düz dosya; başka kullanıcıya ait düz dosya da (2026-10-17), okunabiliyorsa ve ata dizin
+    yazılabilir, yapışkan değil ya da bizimse (`sys::foreign_replaceable`; kök gerekmez, `rename`
+    dizin iznidir) — geri yükleme içeriği ve izni geri koyar, sahip kullanıcı olur (kök olmadan
+    sahiplik geri verilemez). Devralınamaz (`ExternallyManaged`): okunamayan ya da başkasının
+    yapışkan dizinindeki yabancı dosya, `store`
     (nix/guix; bildirimsel yapılandırma), `dir_not_writable`. Biçim parçası istekte verilemez
     (`Invalid`); `take_over` yolu istekteki bir dosya parçasının yolu olmalı. Bilinen sınırlar:
     tutulan inode budanmış snapshot'la gider (ilk dokunuş sabitlendiği için pratikte budanmaz) ya

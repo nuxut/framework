@@ -665,7 +665,8 @@ impl Change {
 }
 
 /// Dosya yolunun biçimi ([`Fragment::FileForm`] değeri; devralma kaydı). Metin biçimi:
-/// `regular` | `symlink:<readlink metni>` | `mode:<sekizli>` | `hardlink`. `Debug` hedefi
+/// `regular` | `symlink:<readlink metni>` | `mode:<sekizli>` | `hardlink` | `foreign:<sekizli>`.
+/// `Debug` hedefi
 /// göstermez (değişmez 9).
 #[derive(Clone, PartialEq, Eq)]
 pub enum FileForm {
@@ -677,6 +678,9 @@ pub enum FileForm {
     ReadOnly(u32),
     /// Sabit bağlı düz dosya (`nlink > 1`); inode snapshot dizininde bir bağla tutulur.
     HardLink,
+    /// Başka kullanıcıya ait düz dosya; izin bitleri (⊆ `0o777`). Geri alma içeriği ve izni
+    /// kullanıcının sahipliğinde geri koyar (2026-10-17).
+    Foreign(u32),
 }
 
 impl FileForm {
@@ -686,6 +690,7 @@ impl FileForm {
             FileForm::Symlink(t) => format!("symlink:{t}"),
             FileForm::ReadOnly(m) => format!("mode:{m:o}"),
             FileForm::HardLink => "hardlink".into(),
+            FileForm::Foreign(m) => format!("foreign:{m:o}"),
         }
     }
 
@@ -693,6 +698,10 @@ impl FileForm {
         if let Some(t) = s.strip_prefix("symlink:") {
             let ok = !t.is_empty() && t.len() <= MAX_PATH_BYTES && !t.chars().any(char::is_control);
             return ok.then(|| FileForm::Symlink(t.to_owned()));
+        }
+        if let Some(m) = s.strip_prefix("foreign:") {
+            let m = u32::from_str_radix(m, 8).ok()?;
+            return (m & !0o777 == 0).then_some(FileForm::Foreign(m));
         }
         if let Some(m) = s.strip_prefix("mode:") {
             let m = u32::from_str_radix(m, 8).ok()?;
@@ -713,6 +722,7 @@ impl fmt::Debug for FileForm {
             FileForm::Symlink(_) => f.write_str("Symlink"),
             FileForm::ReadOnly(m) => write!(f, "ReadOnly({m:o})"),
             FileForm::HardLink => f.write_str("HardLink"),
+            FileForm::Foreign(m) => write!(f, "Foreign({m:o})"),
         }
     }
 }

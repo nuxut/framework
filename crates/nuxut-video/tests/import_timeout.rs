@@ -83,25 +83,44 @@ fn timeout_stops_encoder_and_cleans_up() {
     let extra = extra_threads_after(&baseline, Duration::from_secs(2));
     assert!(extra.is_empty(), "yoklamadan sonra iş parçacığı kaldı: {extra:?}");
 
-    let timeout = Duration::from_millis(800);
-    imp.set_limits(ImportLimits { encode_timeout: timeout, ..ImportLimits::DEFAULT });
-    let progress = std::sync::Mutex::new(0f32);
-    let t = Instant::now();
-    let r = imp.run(
-        &ImportRequest { source: src.clone(), target_px: (640, 360) },
-        &CancelFlag::new(),
-        &|p| *progress.lock().unwrap() = p,
+    assert_eq!(
+        ImportError::TimedOut(Duration::from_millis(800)).to_string(),
+        "dönüştürme 800 ms içinde bitmedi, durduruldu"
     );
-    let elapsed = t.elapsed();
-    assert!(matches!(r, Err(ImportError::TimedOut(d)) if d == timeout), "{r:?}");
-    assert_eq!(r.unwrap_err().to_string(), "dönüştürme 800 ms içinde bitmedi, durduruldu");
-    // Gerçekten kodlarken durduruldu (yarım iş vardı) ve hemen döndü.
-    let p = *progress.lock().unwrap();
-    assert!(p > 0.05 && p < 1.0, "ilerleme {p}");
-    assert!(elapsed < timeout + Duration::from_secs(5), "{elapsed:?}");
-    // mpv örneği dönmeden önce yok edildi: iş parçacığı ve alt süreç yok, yarım çıktı silindi.
-    let extra = extra_threads_after(&baseline, Duration::from_secs(2));
-    assert!(extra.is_empty(), "mpv iş parçacıkları kaldı: {extra:?} (taban {baseline:?})");
-    assert_eq!(children(), "", "alt süreç kaldı");
-    assert!(leftovers(&cache).is_empty(), "{:?}", leftovers(&cache));
+    // Duvar saatinden bağımsız: kodlama gerçekten başladıktan (ilerleme > 0,05) SONRA zaman
+    // aşımı dolsun diye ilk gerçek ilerlemede geri çağırma `timeout` kadar bekler (run_loop'un
+    // son tarihi ondan önce başladı, dönüşte kesin dolmuştur; tamamlanma da yarışamaz). Yük
+    // altında mpv ilk ilerlemeden önce son tarihe yetişemezse süre ikiye katlanıp yeniden denenir;
+    // her denemede temizlik aynı biçimde doğrulanır.
+    let mut timeout = Duration::from_millis(800);
+    loop {
+        imp.set_limits(ImportLimits { encode_timeout: timeout, ..ImportLimits::DEFAULT });
+        let progress = std::sync::Mutex::new(0f32);
+        let t = Instant::now();
+        let r = imp.run(&ImportRequest { source: src.clone(), target_px: (640, 360) }, &CancelFlag::new(), &|p| {
+            let mut last = progress.lock().unwrap();
+            if p > 0.05 && *last <= 0.05 {
+                std::thread::sleep(timeout);
+            }
+            *last = p;
+        });
+        let elapsed = t.elapsed();
+        assert!(matches!(r, Err(ImportError::TimedOut(d)) if d == timeout), "{r:?}");
+        let p = *progress.lock().unwrap();
+        assert!(p < 1.0, "ilerleme {p}");
+        // Durdurulup hemen döndü: ilk ilerleme son tarihten önce, bekleme bir `timeout`.
+        assert!(elapsed < timeout * 2 + Duration::from_secs(5), "{elapsed:?}");
+        // mpv örneği dönmeden önce yok edildi: iş parçacığı ve alt süreç yok, yarım çıktı silindi.
+        let extra = extra_threads_after(&baseline, Duration::from_secs(2));
+        assert!(extra.is_empty(), "mpv iş parçacıkları kaldı: {extra:?} (taban {baseline:?})");
+        assert_eq!(children(), "", "alt süreç kaldı");
+        assert!(leftovers(&cache).is_empty(), "{:?}", leftovers(&cache));
+        if p > 0.05 {
+            break;
+        }
+        // Kodlama başlamadan doldu (aç kalan makine): daha uzun süreyle yeniden.
+        assert!(timeout < Duration::from_secs(30), "kodlama {timeout:?} içinde hiç başlamadı");
+        eprintln!("kodlama {timeout:?} içinde başlamadı; süre ikiye katlanıyor");
+        timeout *= 2;
+    }
 }

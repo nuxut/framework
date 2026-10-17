@@ -61,6 +61,7 @@ Dış bağımlılık yok (`nuxut-motion` saf Rust, analitik yay + bezier).
 | swash | 0.2 | MIT/Apache-2.0 | glyph rasterleştirme — değişken eksenler (wght + FILL + opsz) için doğrudan; cosmic-text zaten aynı sürümü çeker, kopya yok | cosmic-text'in SwashCache'i (yalnızca wght uygular) |
 | sys-locale | 0.3 | MIT/Apache-2.0 | font önbelleğinin anahtarı için cosmic-text'in kendi okuduğu yerel ayar (cosmic-text dışa açmıyor); ağaçtaki aynı sürüm, kopya yok | `LANG` elle okumak (Windows/macOS'ta yanlış) |
 | fontconfig-parser | 0.5 | MIT | genel aileleri (sans-serif/serif/monospace) kullanıcının `~/.config/fontconfig` tercihine ve kurulu bir aileye bağlamak (cosmic-text sabit "Open Sans" kullanıyor; kurulu değilse kalın parça başka aileye düşüyordu). fontdb zaten aynı sürümü çeker | libfontconfig (C) linklemek; `fc-match` süreci çalıştırmak |
+| rustix | 1 (`std`, `fs`; yalnızca Linux) | MIT/Apache-2.0 | `font_scan::prefetch`: font dosyalarının baş kısmını `posix_fadvise(WILLNEED)` ile arka planda sayfa önbelleğine istemek (cosmic-text her yeni öznitelikte ağırlığı farklı her yüzün dosyasına bakar; soğuk diskte ilk şekillendirme ~0,8 sn → ~0,1 sn, bkz. `docs/design/font-cold-start.md`). `unsafe`'siz API; ağaçta zaten var, yeni crate/sistem paketi yok | libc (`unsafe`); dosyayı okuyup atmak (bant genişliği israfı, paralellik için iş parçacığı gerekir) |
 
 ### Wayland runtime (bilgi: `nuxut-wayland`)
 
@@ -268,6 +269,7 @@ yedekleri vardır.
 | inotify (nuxut-config, nuxut-i18n) | Linux | `ConfigWatcher::new` → `Unsupported`; config açılışta okunur. `nuxut_i18n::watch::UserDirWatcher` yalnızca Linux (Debounce/ChangeTracker her platformda) |
 | glow, cosmic-text, swash | hepsi | macOS'ta GL yerine ileride wgpu/Metal yolu (ADR-0003) |
 | fontconfig-parser (nuxut-render) | Linux | genel aileler platform varsayılanlarından (Segoe UI / SF Pro …) |
+| rustix (nuxut-render) | Linux | ön okuma yok; paralel tarama ve artımlı önbellek yalnızca Linux, diğerlerinde fontdb taraması |
 | image, fast_image_resize, resvg, roxmltree, jxl-oxide, material-colors, chrono, pure-rust-locales | hepsi | saf Rust |
 | zeroize (nuxut-core, nuxut-render, nuxut-ui, nuxut-wayland, nuxut-net) | hepsi | saf Rust |
 | memmap2 (nuxut-ui `SecretBuffer::locked`) | hepsi derlenir | `mlock` unix, `MADV_DONTDUMP` Linux; Windows'ta eşleme kilitsiz (alan aynı çalışır) |

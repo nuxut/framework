@@ -31,6 +31,8 @@ mod profile;
 mod shm;
 mod state;
 mod surface;
+#[cfg(feature = "test-touch")]
+mod test_touch;
 mod touch;
 mod toplevels;
 mod types;
@@ -456,6 +458,10 @@ pub fn run_with<A: App>(app: A, options: RunOptions) -> Result<(), RunError> {
             }
         })
         .map_err(|e| RunError::EventLoop(e.error.to_string()))?;
+
+    // Sentetik dokunma (yalnız canlı test derlemesi; `NUXUT_TEST_TOUCH` yoksa iş yok).
+    #[cfg(feature = "test-touch")]
+    test_touch::install(&handle);
 
     // Erişilebilirlik (ADR-0011): at-spi yoksa ya da NUXUT_A11Y=0 ise kanal da kurulmaz.
     #[cfg(feature = "a11y")]

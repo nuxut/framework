@@ -42,7 +42,7 @@ pub fn mode(_m: &Metadata) -> u32 {
 #[cfg(unix)]
 pub fn owned_and_writable(m: &Metadata) -> bool {
     use std::os::unix::fs::MetadataExt;
-    m.uid() == rustix::process::geteuid().as_raw() && m.mode() & 0o200 != 0
+    m.uid() == euid() && !pretend_foreign(m) && m.mode() & 0o200 != 0
 }
 
 #[cfg(not(unix))]
@@ -153,7 +153,7 @@ pub fn sync_dir(dir: &Path) {
 #[cfg(unix)]
 pub fn owned(m: &Metadata) -> bool {
     use std::os::unix::fs::MetadataExt;
-    m.uid() == rustix::process::geteuid().as_raw()
+    m.uid() == euid() && !pretend_foreign(m)
 }
 
 #[cfg(not(unix))]
@@ -170,4 +170,56 @@ pub fn symlink(target: &str, link: &Path) -> io::Result<()> {
 #[cfg(not(unix))]
 pub fn symlink(_target: &str, _link: &Path) -> io::Result<()> {
     Err(io::ErrorKind::Unsupported.into())
+}
+
+/// Etkin kullanıcı.
+#[cfg(unix)]
+fn euid() -> u32 {
+    rustix::process::geteuid().as_raw()
+}
+
+/// Dosya başka kullanıcınınmış gibi mi davranılsın (yalnız test): başka kullanıcıya ait dosya
+/// köksüz yaratılamadığından sahiplik denetimleri bu inode üzerinden sınanır. Devralma yeni bir
+/// inode yazar; o artık bizimdir (gerçekteki gibi).
+#[cfg(unix)]
+fn pretend_foreign(m: &Metadata) -> bool {
+    #[cfg(test)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        TEST_FOREIGN_INO.with(std::cell::Cell::get) == Some(m.ino())
+    }
+    #[cfg(not(test))]
+    {
+        let _ = m;
+        false
+    }
+}
+
+#[cfg(all(unix, test))]
+thread_local! {
+    pub(crate) static TEST_FOREIGN_INO: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+}
+
+/// Başka kullanıcıya ait düz dosya kök gerektirmeden, yanına yazılan dosyanın `rename`'iyle
+/// değiştirilebilir mi (shell docs/design/look-external.md, 2026-10-17): dosyayı okuyabiliyoruz
+/// (özgün içerik snapshot'a girer), ata dizin yazılabilir ve yapışkan bit yok ya da dizin bizim
+/// (yapışkan dizinde başkasının girdisi yalnız dizin ya da dosya sahibince değiştirilir).
+#[cfg(unix)]
+pub fn foreign_replaceable(path: &Path) -> bool {
+    use rustix::fs::{Access, access};
+    use std::os::unix::fs::MetadataExt;
+    let Some(dir) = path.parent() else {
+        return false;
+    };
+    let Ok(dm) = std::fs::metadata(dir) else {
+        return false;
+    };
+    access(path, Access::READ_OK).is_ok()
+        && dir_writable(dir)
+        && (dm.mode() & 0o1000 == 0 || owned(&dm))
+}
+
+#[cfg(not(unix))]
+pub fn foreign_replaceable(_path: &Path) -> bool {
+    false
 }

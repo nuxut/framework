@@ -1416,6 +1416,47 @@ impl<A: App> State<A> {
             Err(e) => tracing::warn!("dokunma bekleme zamanlayıcısı kurulamadı: {e}"),
         }
     }
+
+    /// Temas başlangıcı (`wl_touch.down` ve sentetik dokunma ortak yolu). Yüzey yaşamıyorsa ya da
+    /// girdiye kapalıysa yok sayılır.
+    pub(crate) fn touch_down(&mut self, sid: SurfaceId, id: TouchId, position: Point) {
+        if !self.cx.surfaces.contains_key(&sid) || !self.cx.input_allowed(sid) {
+            return;
+        }
+        let claimed =
+            self.deliver_touch_raw(sid, TouchEvent { id, position, phase: TouchPhase::Down });
+        let mut out = Vec::new();
+        if let Some(generation) = self.cx.touch.down(sid, id, position, claimed, &mut out) {
+            self.arm_touch_hold(generation);
+        }
+        self.deliver_touch_pointer(out);
+    }
+
+    pub(crate) fn touch_up(&mut self, id: TouchId) {
+        let mut out = Vec::new();
+        if let Some((sid, position)) = self.cx.touch.up(id, &mut out) {
+            self.deliver_touch_raw(sid, TouchEvent { id, position, phase: TouchPhase::Up });
+        }
+        self.deliver_touch_pointer(out);
+    }
+
+    /// `position` temasın başladığı yüzeyin koordinatında.
+    pub(crate) fn touch_motion(&mut self, id: TouchId, position: Point) {
+        let mut out = Vec::new();
+        if let Some(sid) = self.cx.touch.motion(id, position, &mut out) {
+            self.deliver_touch_raw(sid, TouchEvent { id, position, phase: TouchPhase::Motion });
+        }
+        self.deliver_touch_pointer(out);
+    }
+
+    pub(crate) fn touch_cancel(&mut self) {
+        self.cancel_touch_hold();
+        let mut out = Vec::new();
+        for (id, sid, position) in self.cx.touch.cancel(&mut out) {
+            self.deliver_touch_raw(sid, TouchEvent { id, position, phase: TouchPhase::Cancel });
+        }
+        self.deliver_touch_pointer(out);
+    }
 }
 
 impl<A: App> TouchHandler for State<A> {
@@ -1440,15 +1481,7 @@ impl<A: App> TouchHandler for State<A> {
         // Dokunma serial'ı da xdg move/resize ve etkinleştirme belirteci için geçerlidir.
         self.cx.last_press = self.touch_seat.clone().map(|seat| (seat, serial));
         self.cx.last_input.clone_from(&self.cx.last_press);
-        let position = Point::new(position.0 as f32, position.1 as f32);
-        let id = TouchId(id);
-        let claimed =
-            self.deliver_touch_raw(sid, TouchEvent { id, position, phase: TouchPhase::Down });
-        let mut out = Vec::new();
-        if let Some(generation) = self.cx.touch.down(sid, id, position, claimed, &mut out) {
-            self.arm_touch_hold(generation);
-        }
-        self.deliver_touch_pointer(out);
+        self.touch_down(sid, TouchId(id), Point::new(position.0 as f32, position.1 as f32));
     }
 
     fn up(
@@ -1460,12 +1493,7 @@ impl<A: App> TouchHandler for State<A> {
         _: u32,
         id: i32,
     ) {
-        let id = TouchId(id);
-        let mut out = Vec::new();
-        if let Some((sid, position)) = self.cx.touch.up(id, &mut out) {
-            self.deliver_touch_raw(sid, TouchEvent { id, position, phase: TouchPhase::Up });
-        }
-        self.deliver_touch_pointer(out);
+        self.touch_up(TouchId(id));
     }
 
     fn motion(
@@ -1477,13 +1505,7 @@ impl<A: App> TouchHandler for State<A> {
         id: i32,
         position: (f64, f64),
     ) {
-        let id = TouchId(id);
-        let position = Point::new(position.0 as f32, position.1 as f32);
-        let mut out = Vec::new();
-        if let Some(sid) = self.cx.touch.motion(id, position, &mut out) {
-            self.deliver_touch_raw(sid, TouchEvent { id, position, phase: TouchPhase::Motion });
-        }
-        self.deliver_touch_pointer(out);
+        self.touch_motion(TouchId(id), Point::new(position.0 as f32, position.1 as f32));
     }
 
     fn shape(
@@ -1508,12 +1530,7 @@ impl<A: App> TouchHandler for State<A> {
     }
 
     fn cancel(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_touch::WlTouch) {
-        self.cancel_touch_hold();
-        let mut out = Vec::new();
-        for (id, sid, position) in self.cx.touch.cancel(&mut out) {
-            self.deliver_touch_raw(sid, TouchEvent { id, position, phase: TouchPhase::Cancel });
-        }
-        self.deliver_touch_pointer(out);
+        self.touch_cancel();
     }
 }
 

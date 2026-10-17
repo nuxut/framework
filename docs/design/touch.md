@@ -105,3 +105,10 @@ temas başına tuş izler (shell `docs/design/osk.md`).
   sürülmedi; öykünmenin ürettiği işaretçi dizileri birim testlerde kayıtlı olay dizileriyle,
   sctk `TouchHandler` bağlantısı derlemeyle doğrulandı. Gerçek dokunmatik donanımda ilk deneme
   açık kalan iştir.
+- **Sentetik dokunma (2026-10-17):** canlı testte dokunma yolu uçtan uca `test-touch` özelliğiyle
+  sürülür (`nuxut-wayland/src/test_touch.rs`, yalnız debug derlemesi — sürümde derleme hatası).
+  Uygulama `NUXUT_TEST_TOUCH=<fifo>` ile başlar; test betiği FIFO'ya satır yazar: `down ID NS X Y`
+  (NS = layer namespace'i, koordinat yüzey içi), `motion ID X Y`, `up ID`, `cancel`. Olaylar
+  `wl_touch` işleyicisiyle aynı yöntemlerden geçer (`State::touch_down/up/motion/cancel`:
+  sahiplenme, öykünme, bekleme tiki, kilit kuralı); yalnız compositor tarafı (seri numarası,
+  yüzey seçimi) sentetiktir. Kullanıcının oturumuna girdi gitmez.

@@ -3188,3 +3188,88 @@ fn created_dirs_in_manifest_are_validated() {
     save_manifest(&fx, &m);
     assert!(store.load(&id).is_none(), "`..`: kayıt reddedilir");
 }
+
+/// Başka kullanıcıya ait düz dosya (ör. `sudo` ile yazılmış `~/.config/kdeglobals`) kök
+/// gerektirmeden yeniden adlandırmayla devralınır; geri yükleme içeriği ve izni geri koyar, sahip
+/// kullanıcı olur (2026-10-17). Başkasının dosyası köksüz yaratılamadığından testte o inode
+/// başkasınınmış gibi görünür (`sys::TEST_FOREIGN_INO`); devralmanın yazdığı yeni inode bizimdir.
+#[test]
+fn take_over_foreign_plain_file_by_rename_and_restore() {
+    use std::os::unix::fs::MetadataExt;
+    struct Pretend;
+    impl Drop for Pretend {
+        fn drop(&mut self) {
+            crate::sys::TEST_FOREIGN_INO.with(|c| c.set(None));
+        }
+    }
+    let pretend = |p: &Path| {
+        let ino = fs::metadata(p).unwrap().ino();
+        crate::sys::TEST_FOREIGN_INO.with(|c| c.set(Some(ino)));
+        Pretend
+    };
+    let fx = Fx::new();
+    let file = fx.cfg("kdeglobals");
+    fs::create_dir_all(file.parent().unwrap()).unwrap();
+    let original = "[General]\nColorScheme=Root\n";
+    fs::write(&file, original).unwrap();
+    fs::set_permissions(&file, fs::Permissions::from_mode(0o640)).unwrap();
+    let line = Fragment::Line {
+        file: file.clone(),
+        marker: "# nuxut".into(),
+        at: Position::Start,
+    };
+    let req = || change("look.kde", vec![(line.clone(), text("# nuxut"))]);
+
+    let _p = pretend(&file);
+    assert_eq!(external_reason(&file), Some(ExternalReason::NotOwned));
+    assert!(ExternalReason::NotOwned.can_take_over(&file));
+    let o = fx.app.apply(req());
+    assert_eq!(
+        reason_of(&o),
+        Some(ExternalReason::NotOwned),
+        "devralmasız yazılmaz: {o:?}"
+    );
+    let id = applied(fx.app.apply(req().take_over(&file)));
+    assert_eq!(
+        fs::read_to_string(&file).unwrap(),
+        format!("# nuxut\n{original}")
+    );
+    assert_eq!(
+        ino_mode_nlink(&file).1 & 0o200,
+        0o200,
+        "artık Nuxut'un yazılabilir dosyası"
+    );
+    assert_eq!(external_reason(&file), None);
+
+    fx.advance(10_000);
+    let r = fx.app.restore(&id, RestoreMode::Safe);
+    assert!(
+        matches!(r, RestoreOutcome::Restored { id: Some(_) }),
+        "{r:?}"
+    );
+    assert_eq!(fs::read_to_string(&file).unwrap(), original);
+    assert_eq!(ino_mode_nlink(&file).1 & 0o777, 0o640, "izin geri geldi");
+
+    // Okunamayan dosya ya da başkasının yapışkan dizinindeki dosya devralınmaz.
+    fs::set_permissions(&file, fs::Permissions::from_mode(0o000)).unwrap();
+    assert!(!ExternalReason::NotOwned.can_take_over(&file), "okunamıyor");
+    fs::set_permissions(&file, fs::Permissions::from_mode(0o640)).unwrap();
+    let dir = file.parent().unwrap();
+    let before = ino_mode_nlink(dir).1 & 0o7777;
+    fs::set_permissions(dir, fs::Permissions::from_mode(0o1777)).unwrap();
+    assert!(
+        ExternalReason::NotOwned.can_take_over(&file),
+        "yapışkan ama dizin bizim"
+    );
+    let _d = pretend(dir);
+    assert!(
+        !ExternalReason::NotOwned.can_take_over(&file),
+        "yapışkan, başkasının dizini"
+    );
+    fs::set_permissions(dir, fs::Permissions::from_mode(before)).unwrap();
+    assert_eq!(
+        FileForm::parse("foreign:640"),
+        Some(FileForm::Foreign(0o640))
+    );
+    assert!(FileForm::parse("foreign:7777").is_none());
+}

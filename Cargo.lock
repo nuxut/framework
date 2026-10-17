@@ -2019,6 +2019,7 @@ dependencies = [
  "nix",
  "nuxut-core",
  "nuxut-theme",
+ "rustix",
  "swash",
  "sys-locale",
  "thiserror",

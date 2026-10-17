@@ -219,6 +219,9 @@ pub struct Context<A: App> {
     /// kapalı, ADR-0011 "Kilit ekranı").
     #[cfg(feature = "a11y")]
     a11y_lock_surfaces: bool,
+    /// Sentetik dokunmanın hedefi: layer namespace'i → son yaratılan yüzey (`test_touch`).
+    #[cfg(feature = "test-touch")]
+    pub(crate) test_layers: HashMap<String, SurfaceId>,
 }
 
 impl<A: App> std::fmt::Debug for Context<A> {
@@ -282,6 +285,8 @@ impl<A: App> Context<A> {
             a11y: crate::a11y::A11y::new(None),
             #[cfg(feature = "a11y")]
             a11y_lock_surfaces: false,
+            #[cfg(feature = "test-touch")]
+            test_layers: HashMap::new(),
         }
     }
 
@@ -359,6 +364,8 @@ impl<A: App> Context<A> {
         layer.set_keyboard_interactivity(to_wlr_keyboard(spec.keyboard));
         // İlk commit tamponsuz: compositor configure ile cevap verir.
         layer.commit();
+        #[cfg(feature = "test-touch")]
+        self.test_layers.insert(spec.namespace.clone(), id);
 
         self.surfaces.insert(
             id,

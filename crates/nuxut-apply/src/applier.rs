@@ -1236,7 +1236,7 @@ impl Applier {
                 }
                 _ => replace_with_file(&self.env, &slot.real, bytes, mode, &now),
             },
-            Some(FileForm::Regular | FileForm::ReadOnly(_)) => {
+            Some(FileForm::Regular | FileForm::ReadOnly(_) | FileForm::Foreign(_)) => {
                 replace_with_file(&self.env, &slot.real, bytes, mode, &now)
             }
             None => match std::fs::remove_file(&slot.real) {
@@ -1734,7 +1734,7 @@ fn render(slot: &FileSlot, edits: &[&Item], rules: &FileRules) -> Result<Action,
                 .then(|| rules.keep_to.clone())
                 .flatten(),
         },
-        FileForm::ReadOnly(m) => FormAction::File {
+        FileForm::ReadOnly(m) | FileForm::Foreign(m) => FormAction::File {
             bytes,
             mode: m,
             keep: None,

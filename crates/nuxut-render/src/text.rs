@@ -398,20 +398,26 @@ impl TextSystem {
     /// Tarama sonucu `font_cache` ile önbelleğe alınır; sonraki açılışlar font dosyalarını
     /// ayrıştırmadan aynı veritabanını kurar (bkz. `font_cache` modül belgesi).
     pub fn new() -> Self {
+        use crate::font_cache::Loaded;
         let mut fonts = match crate::font_cache::load() {
-            Some(db) => FontSystem::new_with_locale_and_db(system_locale(), db),
-            None => {
+            Loaded::Fresh(db) => FontSystem::new_with_locale_and_db(system_locale(), db),
+            loaded => {
+                let reuse = match loaded {
+                    Loaded::Stale(reuse) => Some(reuse),
+                    _ => None,
+                };
                 // Kayıtlar taramadan önce: tarama sırasında eklenen font sonraki açılışta yakalanır.
-                let records = crate::font_cache::current_records();
-                let fonts = FontSystem::new();
+                let (records, db) = crate::font_cache::scan(reuse);
                 // `resolve_generic_families`'ten ÖNCE: kullanıcı tercihleri önbelleğe girmez.
-                crate::font_cache::store(fonts.db(), records);
-                fonts
+                crate::font_cache::store(&db, records);
+                FontSystem::new_with_locale_and_db(system_locale(), db)
             }
         };
         if fonts.db().is_empty() {
             tracing::warn!("hiç font bulunamadı; metin çizilmeyecek");
         }
+        #[cfg(target_os = "linux")]
+        crate::font_scan::prefetch(fonts.db());
         resolve_generic_families(fonts.db_mut());
         Self { fonts, scale: swash::scale::ScaleContext::new(), weights: std::collections::HashMap::new(),
             families: std::collections::HashMap::new(),
@@ -1146,6 +1152,33 @@ fn truncate_to_char_boundary(s: &str, max: usize) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Paralel tam tarama (`font_cache::scan`) `FontSystem::new()` ile aynı yüzleri AYNI SIRADA
+    /// ve aynı genel aileleri vermeli (sıra eşleşmede eşitlik bozucudur).
+    #[test]
+    fn parallel_scan_matches_fontdb() {
+        use cosmic_text::fontdb::{Database, Family};
+        let (_, sequential) = FontSystem::new().into_locale_and_db();
+        let (_, parallel) = crate::font_cache::scan(None);
+        let faces = |db: &Database| -> Vec<String> {
+            db.faces()
+                .map(|f| {
+                    format!(
+                        "{:?}#{} {:?} {} {:?} {} {:?} {}",
+                        f.source, f.index, f.families, f.post_script_name, f.style, f.weight.0, f.stretch,
+                        f.monospaced
+                    )
+                })
+                .collect()
+        };
+        assert!(!sequential.is_empty(), "test makinesinde font yok");
+        assert_eq!(faces(&sequential), faces(&parallel));
+        let generics = |db: &Database| {
+            [Family::Serif, Family::SansSerif, Family::Cursive, Family::Fantasy, Family::Monospace]
+                .map(|f| db.family_name(&f).to_owned())
+        };
+        assert_eq!(generics(&sequential), generics(&parallel));
+    }
 
     /// Önbellekten kurulan veritabanı, taramayla kurulanla aynı yüzleri ve (resolve_generic_families
     /// öncesi ve sonrası) aynı genel aileleri vermeli.

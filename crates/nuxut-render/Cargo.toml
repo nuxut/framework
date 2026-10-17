@@ -31,6 +31,9 @@ workspace = true
 # fontdb aynı sürümü çeker, fontconfig C kütüphanesi linklenmez.
 [target.'cfg(target_os = "linux")'.dependencies]
 fontconfig-parser = "0.5"
+# Font dosyalarının baş kısmını arka planda sayfa önbelleğine istemek (`fadvise(WILLNEED)`,
+# `font_scan::prefetch`); ağaçtaki sürüm, `unsafe`'siz API.
+rustix.workspace = true
 
 [dev-dependencies]
 khronos-egl.workspace = true
