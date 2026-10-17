@@ -1726,20 +1726,19 @@ fn render(slot: &FileSlot, edits: &[&Item], rules: &FileRules) -> Result<Action,
         ),
     };
     let mode = mode.unwrap_or(0o644) & 0o777;
-    // Güvenlik incelemesi "information-disclosure" (2026-10-17): bağ hedefinin ya da başka
-    // kullanıcının dosyasının içeriği kullanıcıya ait yeni bir dosyaya geçer; dosyanın grubu
-    // değişir (kaynağın grubu → kullanıcının birincil grubu). Kaynağın grup izni yeni grupta
-    // okuma yetkisi olurdu: grup bitleri düşülür (diğerleri zaten okuyabiliyordu, kalır).
-    let shared_source = match parse(&form.before) {
+    // Bağ ya da başkasının dosyası devralınırken yeni dosyanın izni ([`takeover_mode`]).
+    let before = parse(&form.before);
+    let shared_source = match &before {
         Some(FileForm::Foreign(_)) => true,
-        Some(FileForm::Symlink(_)) => !std::fs::metadata(&slot.real).is_ok_and(|m| crate::sys::owned_with_our_group(&m)),
+        Some(FileForm::Symlink(_)) => !std::fs::metadata(&slot.real)
+            .is_ok_and(|m| crate::sys::owned_with_our_group(&m)),
         _ => false,
     };
-    let mode = if shared_source { mode & 0o707 } else { mode };
+    let takeover = matches!(before, Some(FileForm::Symlink(_) | FileForm::Foreign(_)));
     Ok(Action::Form(match target {
         FileForm::Regular => FormAction::File {
             bytes,
-            mode: mode | 0o200,
+            mode: if takeover { takeover_mode(mode, shared_source) } else { mode | 0o200 },
             keep: (parse(&form.before) == Some(FileForm::HardLink))
                 .then(|| rules.keep_to.clone())
                 .flatten(),
@@ -1753,7 +1752,7 @@ fn render(slot: &FileSlot, edits: &[&Item], rules: &FileRules) -> Result<Action,
         // bilgi sızıntısı kuralı; özgün grup geri verilemez).
         FileForm::Foreign(m) => FormAction::File {
             bytes,
-            mode: m & 0o707,
+            mode: foreign_restore_mode(m),
             keep: None,
         },
         FileForm::Symlink(t) => FormAction::Symlink(t),
@@ -1769,6 +1768,26 @@ fn render(slot: &FileSlot, edits: &[&Item], rules: &FileRules) -> Result<Action,
             },
         },
     }))
+}
+
+/// Bağ ya da başkasının dosyası devralınınca kullanıcının yeni dosyasının izni (2026-10-17).
+/// Kaynağın çalıştırma bitleri taşınmaz (`/usr/share/themes` dosyaları çoğu zaman 0755: 0705
+/// gibi anlamsız izin çıkıyordu). Kaynak başkasınınsa ya da grubu farklıysa ("information-
+/// disclosure" kuralı) içerik herkese açık değilse yalnız kullanıcı okur (0600), açıksa 0644;
+/// kendi grubumuzdaki kendi dosyamızda okuma bitleri korunur (yazma yalnız kullanıcıya).
+pub(crate) fn takeover_mode(source: u32, shared: bool) -> u32 {
+    let m = source & 0o666;
+    match (shared, m & 0o004 != 0) {
+        (true, true) => 0o644,
+        (true, false) => 0o600,
+        (false, _) => (m & 0o644) | 0o600,
+    }
+}
+
+/// Başkasının dosyası geri yüklenince (sahip kullanıcı olur, grup geri verilemez): herkese açık
+/// değilse grup bitleri düşülür.
+pub(crate) fn foreign_restore_mode(original: u32) -> u32 {
+    if original & 0o004 != 0 { original & 0o777 } else { original & 0o707 }
 }
 
 /// Dosyanın yeni içeriği. Satır/blok parçası eksik ana dosyayı yaratmaz (`rules.create` açıkça

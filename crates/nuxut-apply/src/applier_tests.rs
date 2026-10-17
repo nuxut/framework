@@ -3317,3 +3317,35 @@ fn takeover_never_widens_group_access_or_leaks_content() {
     assert!(!format!("{r:?}").contains(secret));
     assert_eq!(ino_mode_nlink(&file).1 & 0o777, 0o600);
 }
+
+/// Gerçek makine (2026-10-17): `gtk-dark.css` → `/usr/share/themes/Dracula/…` (root, 0755)
+/// devralınınca 0705 çıkıyordu. Yeni dosya çalıştırılamaz, yazma yalnız kullanıcıda; herkese açık
+/// kaynak 0644, gruba kısıtlı başkasının kaynağı 0600 (bilgi sızıntısı kuralı).
+#[test]
+fn takeover_mode_never_executable_and_never_widened() {
+    use super::takeover_mode;
+    assert_eq!(takeover_mode(0o755, true), 0o644, "Dracula 0755 → 0644");
+    assert_eq!(takeover_mode(0o777, true), 0o644, "bağın kendi izni bile olsa");
+    assert_eq!(takeover_mode(0o640, true), 0o600);
+    assert_eq!(takeover_mode(0o644, false), 0o644);
+    assert_eq!(takeover_mode(0o777, false), 0o644, "herkese yazma yok");
+    assert_eq!(takeover_mode(0o444, false), 0o644);
+    assert_eq!(super::foreign_restore_mode(0o640), 0o600);
+    assert_eq!(super::foreign_restore_mode(0o644), 0o644);
+    // Uçtan uca: 0755 başkasının hedefine bağ.
+    use std::os::unix::fs::MetadataExt;
+    let fx = Fx::new();
+    let target = fx.cfg("themes/Dracula/gtk-4.0/gtk-dark.css");
+    fs::create_dir_all(target.parent().unwrap()).unwrap();
+    fs::write(&target, "window {}\n").unwrap();
+    fs::set_permissions(&target, fs::Permissions::from_mode(0o755)).unwrap();
+    let css = fx.cfg("gtk-4.0/gtk-dark.css");
+    fs::create_dir_all(css.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink(&target, &css).unwrap();
+    crate::sys::TEST_FOREIGN_INO.with(|c| c.set(Some(fs::metadata(&target).unwrap().ino())));
+    let line = Fragment::Line { file: css.clone(), marker: "@import 'nuxut.css';".into(), at: Position::Start };
+    let o = fx.app.apply(change("look.css", vec![(line, text("@import 'nuxut.css';"))]).take_over(&css));
+    crate::sys::TEST_FOREIGN_INO.with(|c| c.set(None));
+    assert!(matches!(o, Outcome::Applied { .. }), "{o:?}");
+    assert_eq!(ino_mode_nlink(&css).1 & 0o777, 0o644);
+}

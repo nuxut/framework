@@ -3549,7 +3549,10 @@ Değişmezler:
     sahiplik geri verilemez). Bilgi sızıntısı kuralı (güvenlik incelemesi 2026-10-17): başkasının
     dosyasının ya da başka sahip/gruptaki bağ hedefinin içeriği kullanıcının dosyasına geçerken
     (devralma da geri yükleme de) grup bitleri düşülür — grup değiştiği için kaynağın grup izni
-    yeni grupta okuma yetkisi olurdu; içerik hiçbir sonuç ya da hata metnine girmez (test
+    yeni grupta okuma yetkisi olurdu; yeni dosya hiç çalıştırılabilir değil, yazma yalnız
+    kullanıcıda: herkese açık kaynak 0644, kısıtlı başkasının kaynağı 0600 (`takeover_mode`;
+    gerçek makinede 0755 tema dosyasından 0705 çıkıyordu, 2026-10-17); içerik hiçbir sonuç ya da
+    hata metnine girmez (test
     `takeover_never_widens_group_access_or_leaks_content`). Devralınamaz (`ExternallyManaged`):
     okunamayan ya da başkasının
     yapışkan dizinindeki yabancı dosya, `store`
