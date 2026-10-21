@@ -39,7 +39,7 @@ pub use applier::{
 pub use backend::{Backend, DCONF_TIMEOUT, NoBackend, SYSTEMCTL_TIMEOUT, SystemBackend};
 pub use env::{Env, INSTANCE_ENV, Skip, TargetKind};
 pub use error::ApplyError;
-pub use takeover::{ExternalReason, external_reason};
+pub use takeover::{ExternalReason, external_reason, takeable_link};
 pub use model::{
     Change, FileForm, FragValue, Fragment, KeyPath, MAX_ADDRESS_BYTES, MAX_FRAGMENTS, MAX_LABEL_CHARS,
     MAX_PATH_BYTES, MAX_TEXT_BYTES, Position, SettingId, SnapshotId, Source, TxState,

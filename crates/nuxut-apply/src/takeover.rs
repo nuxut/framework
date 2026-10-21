@@ -61,6 +61,9 @@ impl ExternalReason {
     /// içerik ve izin döner, sahip kullanıcının olur (kök olmadan sahiplik geri verilemez).
     /// Depo (nix/guix; bildirimsel yapılandırma) ve yazılamayan dizin hiç devralınmaz.
     pub fn can_take_over(self, path: &Path) -> bool {
+        if self != ExternalReason::Store && is_link(path) {
+            return true;
+        }
         match self {
             ExternalReason::Store | ExternalReason::DirNotWritable => false,
             ExternalReason::SymlinkBroken | ExternalReason::ReadOnly | ExternalReason::HardLink => {
@@ -75,6 +78,20 @@ impl ExternalReason {
                 }),
         }
     }
+}
+
+/// Yolun son bileşeni symlink mi (`lstat`)?
+fn is_link(path: &Path) -> bool {
+    std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink())
+}
+
+/// `path`'in kendisi devralınabilir bir symlink mi? Karar YALNIZ bağın kendisine bakar: hedefin
+/// sahibi, izni ya da konumu (kullanıcıya ait yapılmış `/usr/share/themes/…` dosyası, kullanıcının
+/// dotfiles deposu) önemsizdir; devralma bağı düz dosyayla değiştirir, hedefe asla yazmaz
+/// (2026-10-17). Tek istisna depo (nix/guix; bildirimsel yapılandırma). Bağın dizini yazılamıyorsa
+/// devralma yazımı `ExternallyManaged` döner.
+pub fn takeable_link(path: &Path) -> bool {
+    is_link(path) && !store_path(path)
 }
 
 /// `path` dışarıdan mı yönetiliyor, yönetiliyorsa neden? Yalnızca `stat`; `None` = Nuxut
@@ -101,6 +118,10 @@ pub fn external_reason(path: &Path) -> Option<ExternalReason> {
                 Some(ExternalReason::ReadOnly)
             } else if nlink > 1 {
                 Some(ExternalReason::HardLink)
+            } else if real.parent().is_some_and(|d| !sys::dir_writable(d)) {
+                // Yazım geçici dosya + rename: dosya kullanıcınınsa da dizin yazılamıyorsa
+                // yazılamaz (eskiden "unknown" çıkıyordu; 2026-10-17).
+                Some(ExternalReason::DirNotWritable)
             } else {
                 None
             }

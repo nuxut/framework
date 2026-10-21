@@ -30,7 +30,7 @@ use crate::model::{
 use crate::store::{Entry, Manifest, Store, value_hash};
 use crate::takeover::{
     ExternalReason, PathId, external_reason, form_of, keep_inode, nofollow_real, replace_with_file,
-    replace_with_link, replace_with_symlink,
+    replace_with_link, replace_with_symlink, takeable_link,
 };
 use crate::write::{
     Current, DIR_MODE, Expect, read_optional_bytes, remove_file, resolve, write_impl,
@@ -2004,12 +2004,17 @@ fn coalesce_target(
 
 /// İstekteki devralınacak yollardan gerçekten dışarıdan yönetilenler için biçim parçası (istenen:
 /// düz dosya). Devralınamayan neden (başka sahip, depo, yazılamayan dizin) → `ExternallyManaged`;
-/// dışarıdan yönetilmeyen yol atlanır.
+/// dışarıdan yönetilmeyen düz yol atlanır. Symlink ise hedefi yazılabilir olsa da bağın kendisi
+/// devralınır ([`takeable_link`]; hedefe yazılmaz, 2026-10-17).
 fn takeover_forms(change: &Change) -> Result<Vec<(Fragment, FragValue)>, ApplyError> {
     let mut out = Vec::new();
     for p in &change.take_over {
         match external_reason(p) {
-            None => {}
+            None if !takeable_link(p) => {}
+            None => out.push((
+                Fragment::FileForm { file: p.clone() },
+                FragValue::Text(FileForm::Regular.to_text()),
+            )),
             Some(r) if r.can_take_over(p) => out.push((
                 Fragment::FileForm { file: p.clone() },
                 FragValue::Text(FileForm::Regular.to_text()),

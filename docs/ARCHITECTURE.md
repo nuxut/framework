@@ -3327,7 +3327,8 @@ pub enum FileForm { Regular, Symlink(String), ReadOnly(u32), HardLink }  // to_t
 // Dışarıdan yönetilme nedeni (yalnızca stat; ExternallyManaged kararıyla aynı ölçüt ve sıra).
 pub enum ExternalReason { SymlinkBroken, Store, NotOwned, ReadOnly, HardLink, DirNotWritable, Unknown }
 impl ExternalReason { fn name(self) -> &'static str /* snake_case */; fn can_take_over(self, &Path) -> bool; }
-pub fn external_reason(&Path) -> Option<ExternalReason>;
+pub fn external_reason(&Path) -> Option<ExternalReason>;  // var olan dosyanın dizini yazılamıyorsa dir_not_writable
+pub fn takeable_link(&Path) -> bool;  // son bileşen symlink ve depo değil: bağın kendisi devralınabilir
 pub mod edit::gvariant { pub fn equivalent(&str, &str) -> bool }  // dconf değer eşitliği (değişmez 13)
 pub enum Source { Settings, Shell, Welcome, Migration, Cli }
 pub struct SettingId;   // [a-z0-9_.], 1..=64
@@ -3542,7 +3543,10 @@ Değişmezler:
     symlink aynı metinle yeniden kurulur (hedef dosyaya hiç dokunulmaz), izin geri alınır (içerik
     bayt bayt), sabit bağ tutulan inode'a yeni bağla yeniden kurulur. Devralınabilir: son bileşeni
     symlink olan her yol (hedef kırık, salt okunur ya da başka kullanıcıya ait olsa da; ör.
-    `gtk-4.0/gtk.css` → `/usr/share/themes/Dracula/…`, neden `not_owned`), salt okunur ve sabit
+    `gtk-4.0/gtk.css` → `/usr/share/themes/Dracula/…`, neden `not_owned`; hedef yazılabilir olsa
+    da: karar YALNIZ bağa bakar, hedefin sahibine ya da konumuna bakılmaz, hedefe asla yazılmaz —
+    `takeable_link`, neden yoksa da devralınır; 2026-10-17, gerçek makinede kullanıcıya ait
+    yapılmış tema dosyası `unknown` ile reddediliyordu), salt okunur ve sabit
     bağlı düz dosya; başka kullanıcıya ait düz dosya da (2026-10-17), okunabiliyorsa ve ata dizin
     yazılabilir, yapışkan değil ya da bizimse (`sys::foreign_replaceable`; kök gerekmez, `rename`
     dizin iznidir) — geri yükleme içeriği ve izni geri koyar, sahip kullanıcı olur (kök olmadan

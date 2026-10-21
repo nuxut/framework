@@ -1675,6 +1675,130 @@ fn take_over_theme_symlinks_css_pair_and_restore() {
     assert_eq!(fs::read(theme.join("assets/check.png")).unwrap(), b"png");
 }
 
+/// Gerçek makinedeki durum (2026-10-17): `gtk.css` bağının hedefi root'un tema dizininde ama
+/// sahibi kullanıcı yapılmış (yazılabilir dosya, yazılamayan dizin); kardeş `gtk-dark.css`'in
+/// hedefi salt okunur. Karar yalnız bağa bakar: ikisi de devralınır, hedeflere dokunulmaz,
+/// neden `unknown` değil.
+#[test]
+fn take_over_link_to_user_owned_file_in_locked_theme_dir() {
+    let fx = Fx::new();
+    let theme = fx.cfg("usr/share/themes/Dracula/gtk-4.0");
+    fs::create_dir_all(theme.join("assets")).unwrap();
+    let light = "window { color: #f8f8f2; }\n";
+    let dark = "window { color: #282a36; }\n";
+    fs::write(theme.join("gtk.css"), light).unwrap();
+    fs::write(theme.join("gtk-dark.css"), dark).unwrap();
+    fs::set_permissions(
+        theme.join("gtk-dark.css"),
+        fs::Permissions::from_mode(0o444),
+    )
+    .unwrap();
+    fs::set_permissions(&theme, fs::Permissions::from_mode(0o555)).unwrap();
+    let dir = fx.cfg("gtk-4.0");
+    fs::create_dir_all(&dir).unwrap();
+    for n in ["gtk.css", "gtk-dark.css", "assets"] {
+        std::os::unix::fs::symlink(theme.join(n), dir.join(n)).unwrap();
+    }
+    let css = dir.join("gtk.css");
+    assert_eq!(external_reason(&css), Some(ExternalReason::DirNotWritable));
+    assert!(ExternalReason::DirNotWritable.can_take_over(&css));
+    assert!(crate::takeable_link(&css));
+    assert!(
+        !ExternalReason::DirNotWritable.can_take_over(&theme.join("gtk.css")),
+        "hedef değil bağ"
+    );
+
+    let import = "@import url(\"nuxut.css\");";
+    let file = |n: &str| Fragment::ManagedFile { file: dir.join(n) };
+    let body = |s: &str| FragValue::File {
+        bytes: format!(
+            "/* Nuxut — {s} · elle düzenleme bir sonraki uygulamada ezilir */\n{import}\n"
+        )
+        .into_bytes(),
+        mode: 0,
+    };
+    // Devralma istenmeden: neden açık (eskiden `unknown`), hiçbir şey yazılmaz.
+    let o = fx
+        .app
+        .apply(change("look.gtk4", vec![(file("gtk.css"), body("a"))]));
+    assert_eq!(reason_of(&o), Some(ExternalReason::DirNotWritable), "{o:?}");
+    assert!(is_symlink(&css));
+
+    let id = applied(
+        fx.app.apply(
+            change(
+                "look.gtk4",
+                vec![
+                    (file("gtk.css"), body("a")),
+                    (file("gtk-dark.css"), body("b")),
+                ],
+            )
+            .take_over(&css)
+            .take_over(dir.join("gtk-dark.css")),
+        ),
+    );
+    for n in ["gtk.css", "gtk-dark.css"] {
+        let p = dir.join(n);
+        assert!(!is_symlink(&p), "{n}");
+        assert!(
+            fs::read_to_string(&p)
+                .unwrap()
+                .ends_with(&format!("{import}\n")),
+            "{n}"
+        );
+        assert_eq!(ino_mode_nlink(&p).1, 0o644, "{n}");
+    }
+    assert_eq!(fs::read_to_string(theme.join("gtk.css")).unwrap(), light);
+    assert_eq!(
+        fs::read_to_string(theme.join("gtk-dark.css")).unwrap(),
+        dark
+    );
+    assert!(is_symlink(&dir.join("assets")));
+
+    fx.advance(10_000);
+    let r = fx.app.restore(&id, RestoreMode::Safe);
+    assert!(
+        matches!(r, RestoreOutcome::Restored { id: Some(_) }),
+        "{r:?}"
+    );
+    for n in ["gtk.css", "gtk-dark.css"] {
+        assert_eq!(fs::read_link(dir.join(n)).unwrap(), theme.join(n), "{n}");
+    }
+    assert_eq!(fs::read_to_string(theme.join("gtk.css")).unwrap(), light);
+    fs::set_permissions(&theme, fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+/// Kullanıcının kendi yazılabilir dosyasına bağ (dotfiles): devralma istenirse yine bağın kendisi
+/// değişir, hedef dosyaya yazılmaz (2026-10-17).
+#[test]
+fn take_over_link_to_writable_dotfile_never_writes_target() {
+    let fx = Fx::new();
+    let dots = fx.cfg("dotfiles/gtk.css");
+    fs::create_dir_all(dots.parent().unwrap()).unwrap();
+    fs::write(&dots, "/* benim */\n").unwrap();
+    let css = fx.cfg("gtk-4.0/gtk.css");
+    fs::create_dir_all(css.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink(&dots, &css).unwrap();
+    assert_eq!(external_reason(&css), None);
+    assert!(crate::takeable_link(&css));
+    let req = change(
+        "look.gtk4",
+        vec![(
+            Fragment::ManagedFile { file: css.clone() },
+            FragValue::File {
+                bytes: "/* Nuxut — x · elle düzenleme bir sonraki uygulamada ezilir */\n"
+                    .as_bytes()
+                    .to_vec(),
+                mode: 0,
+            },
+        )],
+    )
+    .take_over(&css);
+    applied(fx.app.apply(req));
+    assert!(!is_symlink(&css));
+    assert_eq!(fs::read_to_string(&dots).unwrap(), "/* benim */\n");
+}
+
 #[test]
 fn take_over_broken_symlink_and_read_only_file() {
     let fx = Fx::new();

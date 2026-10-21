@@ -217,7 +217,13 @@ pub(crate) fn precheck(env: &Env, real: &Path) -> Result<(), ApplyError> {
     env.guard(TargetKind::File)?;
     env.check_path(real)?;
     check_managed_externally(real)?;
-    if std::fs::symlink_metadata(real).is_err() {
+    if std::fs::symlink_metadata(real).is_ok() {
+        // Var olan dosya geçici dosya + rename ile değişir: dizini yazılabilir olmalı (ör. root'un
+        // tema dizinindeki, sahibi sonradan kullanıcı yapılmış dosya; 2026-10-17).
+        if real.parent().is_some_and(|d| !sys::dir_writable(d)) {
+            return Err(ApplyError::ExternallyManaged(real.to_path_buf()));
+        }
+    } else {
         // En yakın var olan ata yazılabilir mi?
         let mut dir = real.parent();
         while let Some(d) = dir {
